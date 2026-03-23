@@ -1,5 +1,6 @@
 # app.py
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from sqlalchemy.orm import sessionmaker
 from models import engine, User, Task, TaskSubmission, Portfolio, Post, Comment, Like, Role, UserRole
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -9,7 +10,8 @@ from datetime import datetime, timedelta
 
 # --- CONFIGURATION ---
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'supersecretkey'  # replace with env var in production
+CORS(app)
+app.config['SECRET_KEY'] = 'OiJIUzI1NiIsInR5cCI6IkpXVCJ9'  # replace with env var in production
 Session = sessionmaker(bind=engine)
 
 # --- HELPER FUNCTIONS ---
@@ -77,7 +79,7 @@ def get_user(current_user, user_id):
     }
     session.close()
     return jsonify({"status": "success", "data": result})
-
+#not yet
 @app.route("/users/<int:user_id>", methods=["PUT"])
 @token_required
 def update_user(current_user, user_id):
@@ -137,14 +139,18 @@ def create_task(current_user):
         title=data["title"],
         description=data["description"],
         poster_id=current_user.id,
+        payment=data.get("payment"),
         due_date=data.get("due_date"),
         status=data.get("status", "open")
     )
     session.add(task)
     session.commit()
+    task_id = task.id
+    task_title = task.title
     session.close()
     return jsonify({"status": "success", "data": {"id": task.id, "title": task.title}})
 
+#not yet
 # --- TASK SUBMISSION ROUTES ---
 @app.route("/tasks/<int:task_id>/submit", methods=["POST"])
 @token_required
@@ -184,6 +190,28 @@ def get_task_submissions(current_user, task_id):
     session.close()
     return jsonify({"status": "success", "data": result})
 
+@app.route("/tasks/<int:task_id>", methods=["DELETE"])
+@token_required
+def delete_task(current_user, task_id):
+    session = Session()
+
+    task = session.query(Task).filter_by(id=task_id).first()
+
+    if not task:
+        session.close()
+        return jsonify({"status": "error", "message": "Task not found"}), 404
+
+    # Only the employer (poster) can delete the task
+    if task.poster_id != current_user.id:
+        session.close()
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
+    session.delete(task)
+    session.commit()
+    session.close()
+
+    return jsonify({"status": "success", "data": "Task deleted"})
+
 # --- PORTFOLIO ROUTES ---
 @app.route("/portfolio", methods=["POST"])
 @token_required
@@ -219,6 +247,28 @@ def get_portfolio(current_user, user_id):
     session.close()
     return jsonify({"status": "success", "data": result})
 
+@app.route("/portfolio/<int:portfolio_id>", methods=["DELETE"])
+@token_required
+def delete_portfolio(current_user, portfolio_id):
+    session = Session()
+
+    item = session.query(Portfolio).filter_by(id=portfolio_id).first()
+
+    if not item:
+        session.close()
+        return jsonify({"status": "error", "message": "Portfolio item not found"}), 404
+
+    # Only the owner can delete their portfolio item
+    if item.user_id != current_user.id:
+        session.close()
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
+    session.delete(item)
+    session.commit()
+    session.close()
+
+    return jsonify({"status": "success", "data": "Portfolio item deleted"})
+
 # --- POSTS, COMMENTS, LIKES ROUTES ---
 @app.route("/posts", methods=["POST"])
 @token_required
@@ -251,6 +301,27 @@ def get_posts(current_user):
     session.close()
     return jsonify({"status": "success", "data": result})
 
+@app.route("/posts/<int:post_id>", methods=["DELETE"])
+@token_required
+def delete_post(current_user, post_id):
+    session = Session()
+
+    post = session.query(Post).filter_by(id=post_id).first()
+
+    if not post:
+        session.close()
+        return jsonify({"status": "error", "message": "Post not found"}), 404
+
+    if post.user_id != current_user.id:
+        session.close()
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
+    session.delete(post)
+    session.commit()
+    session.close()
+
+    return jsonify({"status": "success", "data": "Post deleted"})
+
 @app.route("/posts/<int:post_id>/comment", methods=["POST"])
 @token_required
 def comment_post(current_user, post_id):
@@ -266,6 +337,27 @@ def comment_post(current_user, post_id):
     session.commit()
     session.close()
     return jsonify({"status": "success", "data": {"id": comment.id}})
+
+@app.route("/comments/<int:comment_id>", methods=["DELETE"])
+@token_required
+def delete_comment(current_user, comment_id):
+    session = Session()
+
+    comment = session.query(Comment).filter_by(id=comment_id).first()
+
+    if not comment:
+        session.close()
+        return jsonify({"status": "error", "message": "Comment not found"}), 404
+
+    if comment.user_id != current_user.id:
+        session.close()
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
+    session.delete(comment)
+    session.commit()
+    session.close()
+
+    return jsonify({"status": "success", "data": "Comment deleted"})
 
 @app.route("/posts/<int:post_id>/like", methods=["POST"])
 @token_required
