@@ -10,9 +10,18 @@ import {
   SlidersHorizontal,
   Calendar,
 } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { TASKS } from '../data/mockData';
 import { useAppContext } from '../context/AppContext';
+
+type Task = {
+  id: number;
+  title: string;
+  description: string;
+  payment: number;
+  status: string;
+  due_date?: string | null;
+};
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   Design: <Palette size={13} />,
@@ -32,18 +41,34 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export function TaskMarketplacePage() {
   const navigate = useNavigate();
-  const { role } = useAppContext();
+  const { role ,openModal, tasks } = useAppContext();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [roleMatch, setRoleMatch] = useState(false);
+  
 
-  const filtered = TASKS.filter((t) => {
-    const matchesSearch =
-      t.title.toLowerCase().includes(search.toLowerCase()) ||
-      t.description.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || t.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  function TaskCard({ task }: { task: Task }) {
+    return (
+      <div className="p-4 rounded-xl shadow bg-white flex flex-col gap-2">
+        <h3 className="font-semibold">{task.title}</h3>
+        <p className="text-sm opacity-70">{task.description}</p>
+
+        <div className="text-sm font-medium">
+          Payment: ${task.payment}
+        </div>
+      </div>
+    );
+  }
+
+  const filtered = tasks.filter((t) => {
+  const matchesSearch =
+    t.title.toLowerCase().includes(search.toLowerCase()) ||
+    t.description.toLowerCase().includes(search.toLowerCase());
+
+  const matchesStatus = statusFilter === 'All' || t.status === statusFilter;
+
+  return matchesSearch && matchesStatus;
+});
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -122,9 +147,29 @@ export function TaskMarketplacePage() {
           </span>
         </div>
       </div>
+      {/*create task*/}
+      {role === 'employer' && (
+        <div className="ml-auto mb-[30px]">
+          <button
+            onClick={() =>
+            openModal({
+              type: 'create-task',
+              title: 'Create Task',
+              onConfirm: (task) => {
+                console.log('New task:', task);
+              },
+            })
+          }
+            className="px-3 py-2 rounded-xl text-sm transition-all hover:opacity-90 cursor-pointer"
+            style={{ backgroundColor: '#3C3F20', color: '#FDF9EB' }}
+          >
+            Create Task
+          </button>
+        </div>
+      )}
 
       {/* Task grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {filtered.map((task) => (
           <div
             key={task.id}
@@ -137,13 +182,12 @@ export function TaskMarketplacePage() {
               <div
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs"
                 style={{
-                  backgroundColor: (CATEGORY_COLORS[task.category] ?? '#BFC897') + '30',
+                  backgroundColor: ( '#BFC897') + '30',
                   color: '#3C3F20',
                 }}
               >
-                {CATEGORY_ICONS[task.category]}
-                <span>{task.category}</span>
               </div>
+
               <span
                 className={`text-xs px-2.5 py-0.5 rounded-full flex-shrink-0 ${
                   task.status === 'Open'
@@ -160,6 +204,7 @@ export function TaskMarketplacePage() {
             <h3 className="text-sm mb-1.5" style={{ color: '#3C3F20' }}>
               {task.title}
             </h3>
+
             <p
               className="text-xs opacity-55 mb-3 line-clamp-2 leading-relaxed flex-1"
               style={{ color: '#3C3F20' }}
@@ -167,25 +212,18 @@ export function TaskMarketplacePage() {
               {task.description}
             </p>
 
-            {task.dueDate && (
+            <div className="text-sm font-medium mb-3">
+              Payment: ${task.payment}
+            </div>
+
+            {task.due_date && (
               <div className="flex items-center gap-1.5 mb-3">
                 <Calendar size={11} style={{ color: '#3C3F20' }} className="opacity-40" />
                 <p className="text-xs opacity-40" style={{ color: '#3C3F20' }}>
-                  Due {task.dueDate}
+                  Due {task.due_date}
                 </p>
               </div>
             )}
-
-            <div className="flex items-center gap-1.5 mb-4">
-              <img
-                src={task.posterAvatar}
-                alt={task.poster}
-                className="w-5 h-5 rounded-full object-cover"
-              />
-              <span className="text-xs opacity-55" style={{ color: '#3C3F20' }}>
-                {task.poster}
-              </span>
-            </div>
 
             <div className="flex gap-2">
               <button
@@ -198,6 +236,7 @@ export function TaskMarketplacePage() {
               >
                 {role === 'worker' ? 'Apply' : 'Manage'}
               </button>
+
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -224,5 +263,7 @@ export function TaskMarketplacePage() {
         </div>
       )}
     </div>
+
+    
   );
 }

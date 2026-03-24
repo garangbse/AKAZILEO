@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Layers, TrendingUp, Clock, ArrowRight } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { WORKER_PROFILE, EMPLOYER_PROFILE, TASKS } from '../data/mockData';

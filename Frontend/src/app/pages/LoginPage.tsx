@@ -2,14 +2,8 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, Zap, ArrowRight, CheckCircle2, Layers, Briefcase } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-
-const { login } = useAppContext();
-const navigate = useNavigate();
-
-const handleLogin = () => {
-  login('worker', 'John Doe', 'john@example.com');
-  navigate('/');
-};
+import { api } from '../../services/api';
+import { Role } from '../context/AppContext';
 
 const PERKS = [
   { icon: <CheckCircle2 size={16} />, text: 'Find quality tasks that match your skills' },
@@ -17,7 +11,10 @@ const PERKS = [
   { icon: <Briefcase size={16} />, text: 'Connect with employers who value your work' },
 ];
 
-export function LoginPage() {
+const LoginPage = () => {
+  const { login } = useAppContext();
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -25,22 +22,68 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
 
-    if (!email.trim() || !password.trim()) {
-      setError('Please fill in all fields.');
+  if (!email.trim() || !password.trim()) {
+    setError('Please fill in all fields.');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await api('/login', 'POST', { email, password });
+
+    if (res.status !== 'success') {
+      setError(res.message || 'Login failed');
       return;
     }
 
-    setLoading(true);
+    const token = res.data.token;
 
-    setTimeout(() => {
-      setLoading(false);
-      // no auth handling here anymore
-    }, 800);
-  };
+    console.log("TOKEN:", token);
+
+    // store token
+    localStorage.setItem('token', token);
+
+
+    type MeResponse = {
+    data: {
+      username: string;
+      email: string;
+      roles: Role[];
+    };
+  }; 
+
+  const me = await api('/me', 'GET', undefined, token) as MeResponse;
+
+  
+
+  const userRoles = me.data.roles; // e.g. ['worker'] or ['employer']
+
+  if (!userRoles.includes(role)) {
+    setError(`Access denied: you are not a ${role}`);
+    setLoading(false);
+    return;
+  }
+
+  login(
+  userRoles,   // from backend
+  role,        // selected role
+  me.data.username,
+  me.data.email
+);
+
+  navigate('/');
+
+  } catch (err) {
+    setError('Server error');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#FDF9EB' }}>
@@ -202,12 +245,19 @@ export function LoginPage() {
 
           <p className="text-center text-sm mt-6 opacity-55" style={{ color: '#3C3F20' }}>
             Don't have an account?{' '}
-            <span className="opacity-100 underline underline-offset-2 cursor-pointer" style={{ color: '#3C3F20' }}>
-              Create one
-            </span>
+             <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="opacity-100 underline underline-offset-2 hover:opacity-75 transition-opacity cursor-pointer bg-transparent border-none p-0"
+                style={{ color: '#3C3F20' }}
+              >
+                Create one
+              </button>
           </p>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default LoginPage;

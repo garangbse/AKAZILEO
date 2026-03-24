@@ -2,9 +2,85 @@ import React from 'react';
 import { X, CheckCircle, XCircle, Trash2, Upload, AlertCircle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
+  type TaskData = { title: string; description: string; payment:number; due_date:string; };
+
+   
+
+  function CreateTaskForm({
+    taskData,
+    setTaskData,
+  }: {
+    taskData: TaskData;
+    setTaskData: React.Dispatch<React.SetStateAction<TaskData>>;
+  }) {
+  
+
+  return (
+    <div className="w-full flex flex-col gap-2">
+      <input
+        placeholder="Title"
+        value={taskData.title}
+        onChange={(e) =>
+          setTaskData((prev: TaskData) => ({ ...prev, title: e.target.value }))
+        }
+        className="px-3 py-2 rounded-xl text-sm"
+      />
+
+      <textarea
+        placeholder="Description"
+        value={taskData.description}
+        onChange={(e) =>
+          setTaskData((prev: any) => ({ ...prev, description: e.target.value }))
+        }
+        className="px-3 py-2 rounded-xl text-sm"
+      />
+
+      <input
+        type="number"
+        placeholder="Payment"
+        value={taskData.payment}
+        onChange={(e) =>
+          setTaskData((prev:any) => ({
+            ...prev,
+            payment: Number(e.target.value),
+          }))
+        }
+      />
+
+      <input
+        type="string"
+        placeholder="Due_Date"
+        value={taskData.due_date}
+        onChange={(e) =>
+          setTaskData((prev:any) => ({
+            ...prev, due_date: e.target.value,}))
+        }
+      />
+    </div>
+
+    
+  );
+}
+
 export function AppModal() {
-  const { modal, closeModal } = useAppContext();
+  const { modal, closeModal, addTask } = useAppContext();
+
+  const [taskData, setTaskData] = React.useState<TaskData>({
+  title: '',
+  description: '',
+  payment:0,
+  due_date: ''
+    });
+
+  React.useEffect(() => {
+    if (modal.type === 'create-task') {
+      setTaskData({ title: '', description: '' ,payment:0, due_date:''});
+    }
+  }, [modal.type]);
   if (!modal.type) return null;
+
+  
+
 
   const configs: Record<
     string,
@@ -75,14 +151,27 @@ export function AppModal() {
       confirmStyle: { backgroundColor: '#3C3F20' },
       showCancel: false,
     },
+    'create-task': {
+    icon: <Upload size={28} style={{ color: '#BFC897' }} />,
+    title: 'Create Task',
+    message: '',
+    confirmLabel: 'Create',
+    confirmStyle: { backgroundColor: '#3C3F20' },
+    showCancel: true,
+  },
   };
 
   const config = configs[modal.type];
   if (!config) return null;
 
   const handleConfirm = () => {
+    if (modal.type === 'create-task') {
+    addTask(taskData);
+  } else {
     modal.onConfirm?.();
-    closeModal();
+  }
+
+  closeModal();
   };
 
   return (
@@ -111,9 +200,14 @@ export function AppModal() {
             {config.icon}
           </div>
           <h2 style={{ color: '#3C3F20' }}>{config.title}</h2>
-          <p className="text-sm opacity-60 leading-relaxed" style={{ color: '#3C3F20' }}>
-            {config.message}
-          </p>
+          {/* ✅ THIS IS WHERE YOUR FORM GOES */}
+            {modal.type === 'create-task' ? (
+              <CreateTaskForm taskData={taskData} setTaskData={setTaskData} />
+            ) : (
+              <p className="text-sm opacity-60 leading-relaxed" style={{ color: '#3C3F20' }}>
+                {config.message}
+              </p>
+            )}
           <div className="flex gap-3 mt-3 w-full">
             {config.showCancel && (
               <button

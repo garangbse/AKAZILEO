@@ -1,6 +1,5 @@
-import { Navigate } from 'react-router';
+import { Navigate, Outlet, NavLink, useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -23,17 +22,20 @@ const navItems = [
   { to: '/settings', label: 'Settings', icon: Settings, end: false },
 ];
 
-const { isAuthenticated } = useAppContext();
-
-if (!isAuthenticated) {
-  return <Navigate to="/login" replace />;
-}
 
 export function Layout() {
-  const { role, setRole } = useAppContext();
+  const { role, setRole, roles, isAuthenticated } = useAppContext();
+  console.log("GUARD AUTH",isAuthenticated)
   const navigate = useNavigate();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
   const profile = role === 'worker' ? WORKER_PROFILE : EMPLOYER_PROFILE;
   const [searchQuery, setSearchQuery] = useState('');
+
+  console.log("AUTH:", isAuthenticated);
 
   return (
     <div className="flex h-screen w-full overflow-hidden" style={{ backgroundColor: '#FDF9EB' }}>
@@ -55,41 +57,7 @@ export function Layout() {
           </div>
         </div>
 
-        {/* Role toggle */}
-        <div className="px-4 py-4 border-b border-white/10">
-          <p className="text-white/40 text-xs uppercase tracking-widest mb-2 px-1">View as</p>
-          <div
-            className="flex rounded-xl overflow-hidden p-0.5"
-            style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
-          >
-            <button
-              onClick={() => setRole('worker')}
-              className={`flex-1 py-1.5 text-sm rounded-lg transition-all cursor-pointer ${
-                role === 'worker' ? 'font-medium' : 'text-white/50'
-              }`}
-              style={
-                role === 'worker'
-                  ? { backgroundColor: '#BFC897', color: '#3C3F20' }
-                  : {}
-              }
-            >
-              Worker
-            </button>
-            <button
-              onClick={() => setRole('employer')}
-              className={`flex-1 py-1.5 text-sm rounded-lg transition-all cursor-pointer ${
-                role === 'employer' ? 'font-medium' : 'text-white/50'
-              }`}
-              style={
-                role === 'employer'
-                  ? { backgroundColor: '#BFC897', color: '#3C3F20' }
-                  : {}
-              }
-            >
-              Employer
-            </button>
-          </div>
-        </div>
+        
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">

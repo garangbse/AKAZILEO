@@ -1,6 +1,17 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { api } from '../../services/api';
 
 export type Role = 'worker' | 'employer';
+
+/*Defines the shape of every task in your app.*/
+export type Task = {
+  id: number;
+  title: string;
+  description: string;
+  status: string;
+  payment: number;
+  due_date: string | null;
+};
 
 export interface ModalConfig {
   type:
@@ -11,10 +22,11 @@ export interface ModalConfig {
     | 'upload-success'
     | 'upload-error'
     | 'add-portfolio'
+    | 'create-task'
     | null;
   title?: string;
   message?: string;
-  onConfirm?: () => void;
+  onConfirm?: (data?: any) => void;
 }
 
 export interface UserProfile {
@@ -22,14 +34,18 @@ export interface UserProfile {
   email: string;
 }
 
+// ✅ Updated login signature to match implementation
+// Tells TypeScript: Any component using this context can access anything, update them, and add new ones.”
+
 interface AppContextType {
   role: Role;
+  roles: Role[];
   setRole: (role: Role) => void;
 
   isAuthenticated: boolean;
   userProfile: UserProfile;
 
-  login: (role: Role, name: string, email: string) => void;
+  login: (roles: Role[], selectedRole: Role, name: string, email: string) => void;
   logout: () => void;
 
   updateUserProfile: (updates: Partial<UserProfile>) => void;
@@ -37,10 +53,15 @@ interface AppContextType {
   modal: ModalConfig;
   openModal: (config: ModalConfig) => void;
   closeModal: () => void;
+  
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  addTask: (taskData: { title: string; description: string; payment: number; due_date:string }) => void;
 }
 
 const AppContext = createContext<AppContextType>({
   role: 'worker',
+  roles: [],
   setRole: () => {},
 
   isAuthenticated: false,
@@ -54,37 +75,59 @@ const AppContext = createContext<AppContextType>({
   modal: { type: null },
   openModal: () => {},
   closeModal: () => {},
+
+  tasks: [],
+  setTasks: () => {},
+  addTask: () => {},
 });
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  /*Creates a global list stored in context.*/
   const [role, setRole] = useState<Role>('worker');
+  const [roles, setRoles] = useState<Role[]>([]);           // ✅ starts empty, filled from API
   const [modal, setModal] = useState<ModalConfig>({ type: null });
-
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: '',
-    email: '',
-  });
+  const [userProfile, setUserProfile] = useState<UserProfile>({ name: '', email: '' });
+  const [tasks, setTasks] = useState<Task[]>([]);
+ 
 
-  const login = (selectedRole: Role, name: string, email: string) => {
-    setRole(selectedRole);
-    setUserProfile({ name, email });
-    setIsAuthenticated(true);
-  };
+  // ✅ Signature now matches the interface
+  const login = (roles: Role[], selectedRole: Role, name: string, email: string) => {
+  setRoles(roles);
+  setRole(selectedRole);
+  setUserProfile({ name, email });
+  setIsAuthenticated(true);
+};
 
   const logout = () => {
     setIsAuthenticated(false);
     setUserProfile({ name: '', email: '' });
+    setRoles([]);  // ✅ clear roles on logout
   };
 
   const updateUserProfile = (updates: Partial<UserProfile>) => {
     setUserProfile((prev) => ({ ...prev, ...updates }));
   };
 
+  const addTask = (taskData: { title: string; description: string ;payment: number; due_date: string}) => {
+    const newTask: Task = {
+      id: Date.now(),
+      title: taskData.title,
+      description: taskData.description,
+      status: 'Open',
+      payment: taskData.payment,
+      due_date:taskData.due_date,
+    };
+
+    setTasks((prev) => [...prev, newTask]);
+  };
+
+  /*Makes everything in it  accessible anywhere via useAppContext().*/
   return (
     <AppContext.Provider
       value={{
         role,
+        roles,        // ✅ was missing before
         setRole,
 
         isAuthenticated,
@@ -98,6 +141,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         modal,
         openModal: setModal,
         closeModal: () => setModal({ type: null }),
+
+
+        tasks,
+        setTasks,
+        addTask,
+
       }}
     >
       {children}

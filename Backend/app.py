@@ -1,7 +1,7 @@
 # app.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker , joinedload
 from models import engine, User, Task, TaskSubmission, Portfolio, Post, Comment, Like, Role, UserRole
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 # --- CONFIGURATION ---
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
 app.config['SECRET_KEY'] = 'OiJIUzI1NiIsInR5cCI6IkpXVCJ9'  # replace with env var in production
 Session = sessionmaker(bind=engine)
 
@@ -19,25 +19,54 @@ def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = request.headers.get('Authorization')
+
         if not token:
             return jsonify({"status": "error", "message": "Token missing"}), 401
-        try:
-            token = token.split(" ")[1]  # Authorization: Bearer <token>
-            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
-            session = Session()
-            current_user = session.query(User).filter_by(id=data['user_id']).first()
-            session.close()
-        except:
-            return jsonify({"status": "error", "message": "Invalid token"}), 401
-        return f(current_user, *args, **kwargs)
-    return decorated
 
+        try:
+            # Extract token
+            token = token.split(" ")[1]
+
+            # Decode JWT
+            data = jwt.decode(
+                token,
+                app.config['SECRET_KEY'],
+                algorithms=["HS256"]
+            )
+
+            # Open session
+            session = Session()
+
+            # EAGER LOAD roles to avoid DetachedInstanceError
+            current_user = session.query(User).options(
+                joinedload(User.roles).joinedload(UserRole.role)
+            ).filter_by(id=data['user_id']).first()
+
+            # Optional: handle user not found
+            if not current_user:
+                session.close()
+                return jsonify({"status": "error", "message": "User not found"}), 404
+
+            # Keep user usable after session close
+            session.expunge(current_user)
+            session.close()
+
+        except Exception as e:
+            return jsonify({"status": "error", "message": "Invalid token"}), 401
+
+        return f(current_user, *args, **kwargs)
+
+    return decorated
 # --- USER ROUTES ---
 @app.route("/register", methods=["POST"])
 def register():
     session = Session()
     data = request.json
+
+    # 1. hash password
     hashed_password = generate_password_hash(data["password"])
+
+    # 2. create user
     new_user = User(
         username=data["username"],
         email=data["email"],
@@ -45,9 +74,18 @@ def register():
     )
     session.add(new_user)
     session.commit()
-    session.close()
-    return jsonify({"status": "success", "data": {"username": data["username"], "email": data["email"]}})
 
+    # 3. find role
+    role = session.query(Role).filter_by(name=data["role"]).first()
+
+    # 4. link user-role
+    user_role = UserRole(user_id=new_user.id, role_id=role.id)
+    session.add(user_role)
+
+    session.commit()
+    session.close()
+
+    return jsonify({"status": "success"})
 @app.route("/login", methods=["POST"])
 def login():
     session = Session()
@@ -59,6 +97,19 @@ def login():
     token = jwt.encode({"user_id": user.id, "exp": datetime.utcnow() + timedelta(hours=2)}, app.config['SECRET_KEY'], algorithm="HS256")
     session.close()
     return jsonify({"status": "success", "data": {"token": token}})
+
+@app.route("/me", methods=["GET"])
+@token_required
+def get_me(current_user):
+    return jsonify({
+        "status": "success",
+        "data": {
+            "id": current_user.id,
+            "username": current_user.username,
+            "email": current_user.email,
+            "roles": [role.role.name for role in current_user.roles]
+        }
+    })
 
 @app.route("/users/<int:user_id>", methods=["GET"])
 @token_required
@@ -130,6 +181,27 @@ def get_tasks(current_user):
     session.close()
     return jsonify({"status": "success", "data": result})
 
+@app.route("/tasks/<int:task_id>", methods=["GET"])
+@token_required
+def get_task(current_user, task_id):
+    session = Session()
+    task = session.query(Task).filter_by(id=task_id).first()
+    if not task:
+        session.close()
+        return jsonify({"status": "error", "message": "Task not found"}), 404
+    result = {
+        "id": task.id,
+        "title": task.title,
+        "description": task.description,
+        "payment": task.payment,
+        "status": task.status,
+        "due_date": str(task.due_date) if task.due_date else None,
+        "poster_id": task.poster_id,
+        "created_at": str(task.created_at)
+    }
+    session.close()
+    return jsonify({"status": "success", "data": result})
+
 @app.route("/tasks", methods=["POST"])
 @token_required
 def create_task(current_user):
@@ -145,10 +217,9 @@ def create_task(current_user):
     )
     session.add(task)
     session.commit()
-    task_id = task.id
-    task_title = task.title
+    result = {"id": task.id, "title": task.title}
     session.close()
-    return jsonify({"status": "success", "data": {"id": task.id, "title": task.title}})
+    return jsonify({"status": "success", "data": result})
 
 #not yet
 # --- TASK SUBMISSION ROUTES ---
@@ -189,6 +260,22 @@ def get_task_submissions(current_user, task_id):
         })
     session.close()
     return jsonify({"status": "success", "data": result})
+
+@app.route("/tasks/<int:task_id>/submissions/<int:submission_id>", methods=["PATCH"])
+@token_required
+def update_submission_status(current_user, task_id, submission_id):
+    session = Session()
+    task = session.query(Task).filter_by(id=task_id).first()
+    if task.poster_id != current_user.id:
+        session.close()
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+    submission = session.query(TaskSubmission).filter_by(id=submission_id).first()
+    data = request.json
+    if data.get("status") in ["approved", "rejected"]:
+        submission.status = data["status"]
+    session.commit()
+    session.close()
+    return jsonify({"status": "success", "data": "Submission updated"})
 
 @app.route("/tasks/<int:task_id>", methods=["DELETE"])
 @token_required

@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { DashboardPage } from './pages/DashboardPage';
 import { TaskMarketplacePage } from './pages/TaskMarketplacePage';
@@ -7,8 +7,8 @@ import { PortfolioPage } from './pages/PortfolioPage';
 import { FeedPage } from './pages/FeedPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
+import  LoginPage  from './pages/LoginPage';
+import RegisterPage  from './pages/RegisterPage';
 
 export const router = createBrowserRouter([
   {

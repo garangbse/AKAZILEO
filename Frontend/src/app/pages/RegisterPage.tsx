@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Zap, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAppContext } from '../context/AppContext';
+import { api } from '../../services/api';
 
 const PASSWORD_RULES = [
   { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
@@ -8,6 +11,9 @@ const PASSWORD_RULES = [
 ];
 
 export function RegisterPage() {
+  const { login } = useAppContext(); 
+  const navigate = useNavigate();     
+
   const [role, setRole] = useState<'worker' | 'employer'>('worker');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -23,37 +29,53 @@ export function RegisterPage() {
   const strengthColors = ['#E8E3C8', '#f59e0b', '#BFC897', '#3C3F20'];
   const strengthLabels = ['', 'Weak', 'Fair', 'Strong'];
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
 
-    if (!name.trim() || !email.trim() || !password || !confirm) {
-      setError('Please fill in all fields.');
+  if (!name.trim() || !email.trim() || !password || !confirm) {
+    setError('Please fill in all fields.');
+    return;
+  }
+
+  if (password !== confirm) {
+    setError('Passwords do not match.');
+    return;
+  }
+
+  if (passwordStrength < 2) {
+    setError('Please choose a stronger password.');
+    return;
+  }
+
+  if (!agreed) {
+    setError('Please accept the terms to continue.');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await api('/register', 'POST', {
+      username: name,
+      email,
+      password,
+      role, // <-- IMPORTANT: send role
+    });
+
+    if (res.status !== 'success') {
+      setError(res.message || 'Registration failed');
       return;
     }
 
-    if (password !== confirm) {
-      setError('Passwords do not match.');
-      return;
-    }
+    navigate('/login');
 
-    if (passwordStrength < 2) {
-      setError('Please choose a stronger password.');
-      return;
-    }
-
-    if (!agreed) {
-      setError('Please accept the terms to continue.');
-      return;
-    }
-
-    setLoading(true);
-
-    setTimeout(() => {
-      setLoading(false);
-      // no auth handling here anymore
-    }, 900);
-  };
+  } catch (err) {
+    setError('Server error. Try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#FDF9EB' }}>
@@ -143,7 +165,6 @@ export function RegisterPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name */}
             <div>
               <label className="block text-sm mb-1.5 opacity-65" style={{ color: '#3C3F20' }}>Full name</label>
               <input
@@ -156,7 +177,6 @@ export function RegisterPage() {
               />
             </div>
 
-            {/* Email */}
             <div>
               <label className="block text-sm mb-1.5 opacity-65" style={{ color: '#3C3F20' }}>Email address</label>
               <input
@@ -169,7 +189,6 @@ export function RegisterPage() {
               />
             </div>
 
-            {/* Password */}
             <div>
               <label className="block text-sm mb-1.5 opacity-65" style={{ color: '#3C3F20' }}>Password</label>
               <div className="relative">
@@ -187,7 +206,6 @@ export function RegisterPage() {
               </div>
             </div>
 
-            {/* Confirm */}
             <div>
               <label className="block text-sm mb-1.5 opacity-65" style={{ color: '#3C3F20' }}>Confirm password</label>
               <div className="relative">
@@ -209,7 +227,6 @@ export function RegisterPage() {
               </div>
             </div>
 
-            {/* Terms */}
             <div className="flex items-start gap-2.5">
               <button
                 type="button"
@@ -246,12 +263,19 @@ export function RegisterPage() {
 
           <p className="text-center text-sm mt-6 opacity-55" style={{ color: '#3C3F20' }}>
             Already have an account?
-            <span className="underline ml-1 cursor-pointer" style={{ color: '#3C3F20' }}>
-              Sign in
-            </span>
+            <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="opacity-100 underline underline-offset-2 hover:opacity-75 transition-opacity cursor-pointer bg-transparent border-none p-0"
+                style={{ color: '#3C3F20' }}
+              >
+                Sign In
+            </button>
           </p>
         </div>
       </div>
     </div>
   );
 }
+
+export default RegisterPage;

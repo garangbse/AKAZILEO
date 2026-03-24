@@ -9,7 +9,7 @@ import {
   Save,
   X,
 } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { WORKER_PROFILE, EMPLOYER_PROFILE, TASKS, PORTFOLIO_ITEMS } from '../data/mockData';
 
