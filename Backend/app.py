@@ -113,6 +113,8 @@ def get_me(current_user):
             "id": current_user.id,
             "username": current_user.username,
             "email": current_user.email,
+            "bio": current_user.bio,
+            "profile_picture": current_user.profile_picture,
             "roles": [role.role.name for role in current_user.roles]
         }
     })

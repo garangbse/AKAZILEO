@@ -168,8 +168,14 @@ export function DashboardPage() {
             style={{ backgroundColor: '#E8E3C8' }}
           >
             <img
-              src={profile.avatar}
-              alt={profile.name}
+              src={
+                currentUser?.profile_picture
+                  ? currentUser.profile_picture.startsWith('data:')
+                    ? currentUser.profile_picture
+                    : `data:image/png;base64,${currentUser.profile_picture}`
+                  : profile.avatar
+              }
+              alt={currentUser?.username || profile.name}
               className="w-24 h-24 rounded-full object-cover mx-auto border-4"
               style={{ borderColor: '#BFC897' }}
             />

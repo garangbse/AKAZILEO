@@ -24,7 +24,7 @@ const navItems = [
 
 
 export function Layout() {
-  const { role, setRole, roles, isAuthenticated } = useAppContext();
+  const { role, setRole, roles, isAuthenticated, currentUser } = useAppContext();
   console.log("GUARD AUTH",isAuthenticated)
   const navigate = useNavigate();
 
@@ -91,7 +91,13 @@ export function Layout() {
           onClick={() => navigate('/profile')}
         >
           <img
-            src={profile.avatar}
+            src={
+              currentUser?.profile_picture
+                ? currentUser.profile_picture.startsWith('data:')
+                  ? currentUser.profile_picture
+                  : `data:image/png;base64,${currentUser.profile_picture}`
+                : profile.avatar
+            }
             alt={profile.name}
             className="w-9 h-9 rounded-full object-cover border-2 flex-shrink-0"
             style={{ borderColor: '#BFC897' }}
@@ -132,7 +138,13 @@ export function Layout() {
             onClick={() => navigate('/profile')}
           >
             <img
-              src={profile.avatar}
+              src={
+                currentUser?.profile_picture
+                  ? currentUser.profile_picture.startsWith('data:')
+                    ? currentUser.profile_picture
+                    : `data:image/png;base64,${currentUser.profile_picture}`
+                  : profile.avatar
+              }
               alt={profile.name}
               className="w-8 h-8 rounded-full object-cover border-2"
               style={{ borderColor: '#BFC897' }}

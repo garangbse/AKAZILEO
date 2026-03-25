@@ -155,10 +155,12 @@ export function FeedPage() {
           if (res.status === 'success') {
             setPosts((prev) => prev.filter((p) => p.id !== postId));
             openModal({ type: 'success', message: 'Post deleted!' });
+          } else {
+            openModal({ type: 'error', message: res.message || 'Failed to delete post' });
           }
         } catch (error) {
           console.error('Error deleting post:', error);
-          openModal({ type: 'error', message: 'Failed to delete post' });
+          openModal({ type: 'error', message: 'Failed to delete post. You can only delete your own posts.' });
         }
       },
     });
@@ -230,7 +232,13 @@ export function FeedPage() {
       >
         <div className="flex gap-3">
           <img
-            src={'https://via.placeholder.com/40'}
+            src={
+              currentUser?.profile_picture
+                ? currentUser.profile_picture.startsWith('data:')
+                  ? currentUser.profile_picture
+                  : `data:image/png;base64,${currentUser.profile_picture}`
+                : 'https://via.placeholder.com/40'
+            }
             alt={currentUser?.username}
             className="w-9 h-9 rounded-full object-cover flex-shrink-0 border-2"
             style={{ borderColor: '#BFC897' }}
@@ -424,7 +432,13 @@ export function FeedPage() {
                 {/* Comment input */}
                 <div className="flex gap-2">
                   <img
-                    src={'https://via.placeholder.com/28'}
+                    src={
+                      currentUser?.profile_picture
+                        ? currentUser.profile_picture.startsWith('data:')
+                          ? currentUser.profile_picture
+                          : `data:image/png;base64,${currentUser.profile_picture}`
+                        : 'https://via.placeholder.com/28'
+                    }
                     alt={currentUser?.username}
                     className="w-7 h-7 rounded-full object-cover flex-shrink-0"
                   />

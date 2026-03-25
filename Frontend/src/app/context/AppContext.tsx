@@ -51,12 +51,13 @@ interface AppContextType {
 
   isAuthenticated: boolean;
   userProfile: UserProfile;
-  currentUser: { id?: number; username?: string; email?: string } | null;
+  currentUser: { id?: number; username?: string; email?: string; bio?: string; profile_picture?: string } | null;
 
   login: (roles: Role[], selectedRole: Role, id: number, name: string, email: string) => void;
   logout: () => void;
 
   updateUserProfile: (updates: Partial<UserProfile>) => void;
+  updateCurrentUser: (updates: Partial<{ id?: number; username?: string; email?: string; bio?: string; profile_picture?: string }>) => void;
 
   modal: ModalConfig;
   openModal: (config: ModalConfig) => void;
@@ -80,6 +81,7 @@ const AppContext = createContext<AppContextType>({
   logout: () => {},
 
   updateUserProfile: () => {},
+  updateCurrentUser: () => {},
 
   modal: { type: null },
   openModal: () => {},
@@ -97,7 +99,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [modal, setModal] = useState<ModalConfig>({ type: null });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile>({ name: '', email: '' });
-  const [currentUser, setCurrentUser] = useState<{ id?: number; username?: string; email?: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id?: number; username?: string; email?: string; bio?: string; profile_picture?: string } | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
 
   // Restore session from localStorage on app load
@@ -115,7 +117,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const response = await api('/me', 'GET', undefined, token);
         
         if (response.status === 'success' && response.data) {
-          const { id, username, email, roles: userRoles } = response.data;
+          const { id, username, email, roles: userRoles, bio, profile_picture } = response.data;
           
           // Restore the first available role (or 'worker' as default)
           const selectedRole = userRoles && userRoles.length > 0 ? userRoles[0] : 'worker';
@@ -124,7 +126,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setRoles(userRoles);
           setRole(selectedRole);
           setUserProfile({ name: username, email });
-          setCurrentUser({ id, username, email });
+          setCurrentUser({ id, username, email, bio, profile_picture });
           setIsAuthenticated(true);
           
           console.log('[SESSION] Session restored:', { id, username, role: selectedRole });
@@ -180,6 +182,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUserProfile((prev) => ({ ...prev, ...updates }));
   };
 
+  const updateCurrentUser = (updates: Partial<{ id?: number; username?: string; email?: string; bio?: string; profile_picture?: string }>) => {
+    setCurrentUser((prev) => prev ? { ...prev, ...updates } : null);
+  };
+
   const addTask = async (taskData: {
     title: string;
     description: string;
@@ -199,7 +205,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider
       value={{
         role,
-        roles,        // ✅ was missing before
+        roles,
         setRole,
 
         isAuthenticated,
@@ -210,6 +216,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         logout,
 
         updateUserProfile,
+        updateCurrentUser,
 
         modal,
         openModal: setModal,
