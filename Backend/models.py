@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Float, DateTime, Enum, ForeignKey, create_engine
+from sqlalchemy import Column, Integer, String, Text, Float, DateTime, Enum, ForeignKey, Boolean, create_engine
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
 
@@ -32,6 +32,8 @@ class User(Base):
     posts = relationship("Post", back_populates="user")
     comments = relationship("Comment", back_populates="user")
     likes = relationship("Like", back_populates="user")
+    applications = relationship("TaskApplication", back_populates="worker")
+    notifications = relationship("Notification", back_populates="user")
 
 class Role(Base):
     __tablename__ = "roles"
@@ -61,7 +63,22 @@ class Task(Base):
 
     poster = relationship("User", back_populates="task_posted")
     submissions = relationship("TaskSubmission", back_populates="task")
+    applications = relationship("TaskApplication", back_populates="task")
 
+class TaskApplication(Base):
+    __tablename__ = "task_applications"
+
+    id = Column(Integer, primary_key=True)
+
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    worker_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    status = Column(String, default="pending")  # pending / accepted / rejected
+
+    # Relationships
+    task = relationship("Task", back_populates="applications")
+    worker = relationship("User", back_populates="applications")
+    
 class TaskSubmission(Base):
     __tablename__ = "task_submissions"
     id = Column(Integer, primary_key=True)
@@ -97,8 +114,8 @@ class Post(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     user = relationship("User", back_populates="posts")
-    comments = relationship("Comment", back_populates="post")
-    likes = relationship("Like", back_populates="post")
+    comments = relationship("Comment", back_populates="post", cascade="all, delete-orphan")
+    likes = relationship("Like", back_populates="post", cascade="all, delete-orphan")
 
 class Like(Base):
     __tablename__ = "likes"
@@ -121,6 +138,20 @@ class Comment(Base):
     
     post = relationship("Post", back_populates="comments")
     user = relationship("User", back_populates="comments")
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    type = Column(String(50), nullable=False)  # 'application_accepted', 'application_rejected'
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    related_id = Column(Integer, nullable=True)  # application_id
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", back_populates="notifications")
 
 #Create the database and tables
 Base.metadata.create_all(engine)

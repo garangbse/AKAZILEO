@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Layers, TrendingUp, Clock, ArrowRight } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { WORKER_PROFILE, EMPLOYER_PROFILE, TASKS } from '../data/mockData';
+import { getAcceptedTasks, getTasksByPosterId } from '../../services/task';
 
 const CATEGORY_COLORS: Record<string, string> = {
   Design: '#BFC897',
@@ -81,14 +82,74 @@ function TaskCard({ task, onClick }: { task: (typeof TASKS)[0]; onClick: () => v
 }
 
 export function DashboardPage() {
-  const { role } = useAppContext();
+  const { role, currentUser } = useAppContext();
   const navigate = useNavigate();
   const isWorker = role === 'worker';
   const profile = isWorker ? WORKER_PROFILE : EMPLOYER_PROFILE;
 
-  const recentTasks = isWorker
-    ? TASKS.filter((t) => t.worker === 'GON').slice(0, 4)
-    : TASKS.filter((t) => t.poster === 'LEOREO').slice(0, 4);
+  const [acceptedTasks, setAcceptedTasks] = useState<any[]>([]);
+  const [postedTasks, setPostedTasks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch tasks for both workers and employers
+  useEffect(() => {
+    const fetchTasks = async () => {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        if (isWorker) {
+          // Fetch accepted tasks for workers
+          const response = await getAcceptedTasks(token);
+          if (response.status === 'success' && response.data) {
+            const transformedTasks = response.data.map((task: any) => ({
+              id: task.id,
+              title: task.title,
+              description: task.description,
+              category: 'Task',
+              status: task.status === 'open' ? 'Open' : task.status === 'assigned' ? 'In Progress' : 'Completed',
+              completion: task.status === 'completed' ? 100 : task.status === 'assigned' ? 50 : 0,
+              poster: task.poster,
+              posterAvatar: task.poster_avatar || 'https://via.placeholder.com/40',
+              payment: task.payment,
+              worker: null,
+            }));
+            setAcceptedTasks(transformedTasks.slice(0, 4));
+          }
+        } else {
+          // Fetch tasks posted by current employer
+          const response = await getTasksByPosterId(currentUser?.id, token);
+          if (response.status === 'success' && response.data) {
+            const transformedTasks = response.data.map((task: any) => ({
+              id: task.id,
+              title: task.title,
+              description: task.description,
+              category: 'Task',
+              status: task.status === 'open' ? 'Open' : task.status === 'assigned' ? 'In Progress' : 'Completed',
+              completion: task.status === 'completed' ? 100 : task.status === 'assigned' ? 50 : 0,
+              poster: currentUser?.username || 'You',
+              posterAvatar: 'https://via.placeholder.com/40',
+              payment: task.payment,
+              worker: null,
+            }));
+            setPostedTasks(transformedTasks.slice(0, 4));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch tasks:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, [isWorker, currentUser?.id]);
+
+  const recentTasks = isWorker ? acceptedTasks : postedTasks;
 
   return (
     <div className="max-w-6xl mx-auto">

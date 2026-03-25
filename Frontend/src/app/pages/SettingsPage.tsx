@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Bell,
   Lock,
@@ -10,6 +10,7 @@ import {
   Globe,
   ChevronRight,
 } from 'lucide-react';
+import { getNotifications, markNotificationRead } from '../../services/task';
 
 type SettingGroup = {
   label: string;
@@ -89,6 +90,65 @@ const SETTING_GROUPS: SettingGroup[] = [
 
 export function SettingsPage() {
   const [activeItem, setActiveItem] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [notificationError, setNotificationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeItem === 'Notifications') {
+      setLoadingNotifications(true);
+      setNotificationError(null);
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setNotificationError('Please log in to view notifications');
+        setLoadingNotifications(false);
+        return;
+      }
+      
+      getNotifications(token)
+        .then((response) => {
+          if (response.status === 'success') {
+            setNotifications(response.data);
+          } else {
+            setNotificationError('Failed to load notifications');
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to fetch notifications:', error);
+          setNotificationError('Failed to load notifications. Please try again.');
+        })
+        .finally(() => setLoadingNotifications(false));
+    }
+  }, [activeItem]);
+
+  const handleNotificationRead = async (notificationId: number) => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      setNotificationError('Please log in to update notifications');
+      return;
+    }
+    
+    try {
+      const response = await markNotificationRead(notificationId, token);
+      if (response.status === 'success') {
+        // Update local state to mark as read
+        setNotifications(
+          notifications.map((n) =>
+            n.id === notificationId ? { ...n, is_read: true } : n
+          )
+        );
+      } else {
+        setNotificationError('Failed to update notification');
+      }
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+      setNotificationError('Failed to update notification. Please try again.');
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -161,7 +221,9 @@ export function SettingsPage() {
                             opacity: item.badge === 'Coming soon' ? 0.7 : 1,
                           }}
                         >
-                          {item.badge}
+                          {item.title === 'Notifications' && unreadCount > 0
+                            ? `${unreadCount} new`
+                            : item.badge}
                         </span>
                       )}
                       <ChevronRight
@@ -183,18 +245,89 @@ export function SettingsPage() {
                 className="rounded-2xl p-6 mt-2 shadow-sm"
                 style={{ backgroundColor: '#FDF9EB' }}
               >
-                <p className="text-sm opacity-60 text-center" style={{ color: '#3C3F20' }}>
-                  This settings panel is reserved for future implementation. Check back soon!
-                </p>
-                <div className="flex justify-center mt-4">
-                  <button
-                    onClick={() => setActiveItem(null)}
-                    className="px-5 py-2 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer"
-                    style={{ backgroundColor: '#3C3F20' }}
-                  >
-                    Close
-                  </button>
-                </div>
+                {activeItem === 'Notifications' ? (
+                  <div>
+                    {notificationError && (
+                      <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: '#FEE2E2', borderLeft: '4px solid #EF4444' }}>
+                        <p className="text-sm" style={{ color: '#991B1B' }}>
+                          {notificationError}
+                        </p>
+                      </div>
+                    )}
+                    {loadingNotifications ? (
+                      <p className="text-sm opacity-60 text-center" style={{ color: '#3C3F20' }}>
+                        Loading notifications...
+                      </p>
+                    ) : notifications.length === 0 ? (
+                      <p className="text-sm opacity-60 text-center" style={{ color: '#3C3F20' }}>
+                        No notifications yet
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`p-4 rounded-lg border ${
+                              !notification.is_read
+                                ? 'border-yellow-300 bg-yellow-50'
+                                : 'border-gray-200 bg-white'
+                            }`}
+                            onClick={() => !notification.is_read && handleNotificationRead(notification.id)}
+                            style={{
+                              cursor: !notification.is_read ? 'pointer' : 'default',
+                              borderColor: !notification.is_read ? '#FCD34D' : '#E5E7EB',
+                              backgroundColor: !notification.is_read ? '#FEFCE8' : '#F9FAFB',
+                            }}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium" style={{ color: '#3C3F20' }}>
+                                  {notification.title}
+                                </p>
+                                <p className="text-xs opacity-60 mt-1" style={{ color: '#3C3F20' }}>
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs opacity-40 mt-2" style={{ color: '#3C3F20' }}>
+                                  {new Date(notification.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                              {!notification.is_read && (
+                                <div
+                                  className="w-2 h-2 rounded-full flex-shrink-0 ml-3 mt-1"
+                                  style={{ backgroundColor: '#3C3F20' }}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex justify-center mt-4">
+                      <button
+                        onClick={() => setActiveItem(null)}
+                        className="px-5 py-2 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer"
+                        style={{ backgroundColor: '#3C3F20' }}
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm opacity-60 text-center" style={{ color: '#3C3F20' }}>
+                      This settings panel is reserved for future implementation. Check back soon!
+                    </p>
+                    <div className="flex justify-center mt-4">
+                      <button
+                        onClick={() => setActiveItem(null)}
+                        className="px-5 py-2 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer"
+                        style={{ backgroundColor: '#3C3F20' }}
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>

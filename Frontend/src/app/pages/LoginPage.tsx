@@ -51,6 +51,7 @@ const LoginPage = () => {
 
     type MeResponse = {
     data: {
+      id: number;
       username: string;
       email: string;
       roles: Role[];
@@ -72,6 +73,7 @@ const LoginPage = () => {
   login(
   userRoles,   // from backend
   role,        // selected role
+  me.data.id,
   me.data.username,
   me.data.email
 );
@@ -130,7 +132,7 @@ const LoginPage = () => {
 
         <div className="relative z-10">
           <p className="text-white/30 text-xs leading-relaxed border-l-2 pl-3" style={{ borderColor: '#BFC897' }}>
-            "TaskFlow helped me find consistent freelance work that matches my expertise."
+            "AKAZILEO helped me find consistent freelance work that matches my expertise."
           </p>
           <p className="text-white/40 text-xs mt-2">— Sarah M., UI/UX Designer</p>
         </div>

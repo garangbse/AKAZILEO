@@ -1,72 +1,216 @@
-import React, { useState } from 'react';
-import { Heart, MessageCircle, Share2, Image, Send } from 'lucide-react';
-import { FEED_POSTS, WORKER_PROFILE } from '../data/mockData';
+import React, { useState, useEffect, useRef } from 'react';
+import { Heart, MessageCircle, Share2, Image, Send, Trash2, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { api } from "../../services/api";
+import { api, fileToBase64 } from "../../services/api";
+
+type FeedComment = {
+  id: number;
+  content: string;
+  username: string;
+  parent_id?: number;
+  user_id?: number;
+};
 
 type FeedPost = {
-  id: string;
-  author: string;
-  authorAvatar: string;
-  role: string;
+  id: string | number;
+  user_id: number;
+  author?: string;
+  authorAvatar?: string;
+  role?: string;
   content: string;
-  media: string | null;
+  media_file: string | null;
   likes: number;
-  comments: number;
-  timestamp: string;
-  liked: boolean;
+  comments: FeedComment[];
+  timestamp?: string;
+  liked?: boolean;
 };
 
 export function FeedPage() {
-  const { role } = useAppContext();
-  const profile =
-    role === 'worker'
-      ? WORKER_PROFILE
-      : {
-          name: 'LEOREO',
-          avatar:
-            'https://images.unsplash.com/photo-1672685667592-0392f458f46f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=100',
-        };
-
-  const [posts, setPosts] = useState<FeedPost[]>(FEED_POSTS as FeedPost[]);
+  const { role, currentUser, openModal } = useAppContext();
+  const [posts, setPosts] = useState<FeedPost[]>([]);
   const [newPostText, setNewPostText] = useState('');
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(false);
 
-  const handleLike = (id: string) => {
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p
-      )
-    );
+  // Fetch posts from API
+  const fetchPosts = async () => {
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await api('/posts', 'GET', undefined, token);
+      if (response.status === 'success' && response.data) {
+        setPosts(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch posts:', error);
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const handleLike = async (postId: string | number) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await api(`/posts/${postId}/like`, 'POST', {}, token);
+      if (response.status === 'success') {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? { ...p, liked: response.data.liked, likes: response.data.likes }
+              : p
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
   };
 
   const handlePost = async () => {
     if (!newPostText.trim()) return;
 
     const token = localStorage.getItem("token");
+    if (!token) {
+      console.error('No authentication token');
+      return;
+    }
 
-    const res = await api(
-      "/posts", // or /posts depending on your backend route
-      "POST",
-      {
-        user_id: 1, // replace this with the logged-in user id from auth
-        content: newPostText,
-        media_file: null
-      },
-      token || undefined
-    );
+    try {
+      let mediaBase64 = null;
 
-    if (res.status === "success") {
-      localStorage.setItem("token", res.data.token);
-      setPosts((prev) => [res.data, ...prev]);
-      setNewPostText("");
-    } else {
-      console.log(res);
+      // Convert file to base64 if provided
+      if (mediaFile) {
+        mediaBase64 = await fileToBase64(mediaFile);
+      }
+
+      const res = await api(
+        "/posts",
+        "POST",
+        {
+          content: newPostText,
+          media_file: mediaBase64
+        },
+        token
+      );
+
+      if (res.status === "success") {
+        setNewPostText("");
+        setMediaFile(null);
+        setMediaPreview(null);
+        await fetchPosts();
+        openModal({ type: 'success', message: 'Post created successfully!' });
+      }
+    } catch (error) {
+      console.error('Error posting:', error);
+      openModal({ type: 'error', message: 'Failed to create post' });
     }
   };
 
-  const toggleComments = (id: string) => {
+  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setMediaFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setMediaPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveMedia = () => {
+    setMediaFile(null);
+    setMediaPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeletePost = (postId: string | number) => {
+    openModal({
+      type: 'delete',
+      onConfirm: async () => {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        try {
+          const res = await api(`/posts/${postId}`, 'DELETE', undefined, token);
+          if (res.status === 'success') {
+            setPosts((prev) => prev.filter((p) => p.id !== postId));
+            openModal({ type: 'success', message: 'Post deleted!' });
+          }
+        } catch (error) {
+          console.error('Error deleting post:', error);
+          openModal({ type: 'error', message: 'Failed to delete post' });
+        }
+      },
+    });
+  };
+
+  const handleCommentSubmit = async (postId: string | number) => {
+    const commentText = commentInputs[postId];
+    if (!commentText?.trim()) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const res = await api(
+        `/posts/${postId}/comment`,
+        'POST',
+        { content: commentText },
+        token
+      );
+
+      if (res.status === 'success') {
+        setCommentInputs((prev) => ({ ...prev, [postId]: '' }));
+        await fetchPosts();
+      }
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      openModal({ type: 'error', message: 'Failed to post comment' });
+    }
+  };
+
+  const handleDeleteComment = (commentId: number) => {
+    openModal({
+      type: 'delete',
+      onConfirm: async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+          const res = await api(`/comments/${commentId}`, 'DELETE', undefined, token);
+          if (res.status === 'success') {
+            await fetchPosts();
+            openModal({ type: 'success', message: 'Comment deleted!' });
+          }
+        } catch (error) {
+          console.error('Error deleting comment:', error);
+          openModal({ type: 'error', message: 'Failed to delete comment' });
+        }
+      },
+    });
+  };
+
+  const toggleComments = (id: string | number) => {
     setOpenComments((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
@@ -86,8 +230,8 @@ export function FeedPage() {
       >
         <div className="flex gap-3">
           <img
-            src={profile.avatar}
-            alt={profile.name}
+            src={'https://via.placeholder.com/40'}
+            alt={currentUser?.username}
             className="w-9 h-9 rounded-full object-cover flex-shrink-0 border-2"
             style={{ borderColor: '#BFC897' }}
           />
@@ -100,14 +244,36 @@ export function FeedPage() {
               className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
               style={{ backgroundColor: '#FDF9EB', color: '#3C3F20' }}
             />
+
+            {/* Media preview */}
+            {mediaPreview && (
+              <div className="mt-3 rounded-xl overflow-hidden relative">
+                <img
+                  src={mediaPreview}
+                  alt="Preview"
+                  className="w-full max-h-48 object-cover"
+                />
+                <button
+                  onClick={handleRemoveMedia}
+                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500 hover:bg-red-600 transition-colors cursor-pointer"
+                >
+                  <X size={14} className="text-white" />
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between mt-3">
-              <button
-                className="flex items-center gap-1.5 text-sm opacity-45 hover:opacity-70 transition-opacity cursor-pointer"
-                style={{ color: '#3C3F20' }}
-              >
+              <label className="flex items-center gap-1.5 text-sm opacity-45 hover:opacity-70 transition-opacity cursor-pointer" style={{ color: '#3C3F20' }}>
                 <Image size={15} />
                 <span>Photo</span>
-              </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleMediaSelect}
+                  className="hidden"
+                />
+              </label>
               <button
                 onClick={handlePost}
                 disabled={!newPostText.trim()}
@@ -131,29 +297,39 @@ export function FeedPage() {
             style={{ backgroundColor: '#E8E3C8' }}
           >
             {/* Author row */}
-            <div className="flex items-center gap-3 p-5 pb-3">
-              <img
-                src={post.authorAvatar}
-                alt={post.author}
-                className="w-10 h-10 rounded-full object-cover border-2 flex-shrink-0"
-                style={{ borderColor: '#BFC897' }}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm" style={{ color: '#3C3F20' }}>
-                  {post.author}
-                </p>
-                <div className="flex items-center gap-2">
-                  <span
-                    className="text-xs px-2 py-0.5 rounded-full capitalize"
-                    style={{ backgroundColor: '#BFC897' + '40', color: '#3C3F20' }}
-                  >
-                    {post.role}
-                  </span>
-                  <span className="text-xs opacity-40" style={{ color: '#3C3F20' }}>
-                    {post.timestamp}
-                  </span>
+            <div className="flex items-center justify-between p-5 pb-3">
+              <div className="flex items-center gap-3">
+                <img
+                  src={post.authorAvatar || 'https://via.placeholder.com/40'}
+                  alt={post.author}
+                  className="w-10 h-10 rounded-full object-cover border-2 flex-shrink-0"
+                  style={{ borderColor: '#BFC897' }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm" style={{ color: '#3C3F20' }}>
+                    {post.author}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full capitalize"
+                      style={{ backgroundColor: '#BFC897' + '40', color: '#3C3F20' }}
+                    >
+                      {post.role}
+                    </span>
+                    <span className="text-xs opacity-40" style={{ color: '#3C3F20' }}>
+                      {post.timestamp}
+                    </span>
+                  </div>
                 </div>
               </div>
+              {currentUser?.id === post.user_id && (
+                <button
+                  onClick={() => handleDeletePost(post.id)}
+                  className="p-2 rounded-lg hover:bg-red-100 transition-colors cursor-pointer"
+                >
+                  <Trash2 size={14} className="text-red-500" />
+                </button>
+              )}
             </div>
 
             {/* Content */}
@@ -164,10 +340,14 @@ export function FeedPage() {
             </div>
 
             {/* Media */}
-            {post.media && (
+            {post.media_file && (
               <div className="mx-5 mb-3 rounded-xl overflow-hidden">
                 <img
-                  src={post.media}
+                  src={
+                    post.media_file.startsWith('data:')
+                      ? post.media_file
+                      : `data:image/png;base64,${post.media_file}`
+                  }
                   alt="Post media"
                   className="w-full max-h-72 object-cover"
                 />
@@ -197,7 +377,7 @@ export function FeedPage() {
                 style={{ color: '#3C3F20' }}
               >
                 <MessageCircle size={14} />
-                <span>{post.comments}</span>
+                <span>{post.comments.length}</span>
               </button>
 
               <button
@@ -209,16 +389,43 @@ export function FeedPage() {
               </button>
             </div>
 
-            {/* Comment input */}
+            {/* Comments Section */}
             {openComments[post.id] && (
               <div
-                className="px-5 py-3 border-t"
+                className="px-5 py-4 border-t"
                 style={{ borderColor: '#D0CBAF', backgroundColor: '#FDF9EB' }}
               >
+                {/* Display existing comments */}
+                {post.comments.length > 0 && (
+                  <div className="mb-4 space-y-3">
+                    {post.comments.map((comment) => (
+                      <div key={comment.id} className="flex gap-2">
+                        <div className="flex-1 text-sm">
+                          <p className="font-medium" style={{ color: '#3C3F20' }}>
+                            {comment.username}
+                          </p>
+                          <p className="opacity-75" style={{ color: '#3C3F20' }}>
+                            {comment.content}
+                          </p>
+                        </div>
+                        {currentUser?.id === comment.user_id && (
+                          <button
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="p-1.5 rounded-lg hover:bg-red-100 transition-colors cursor-pointer flex-shrink-0"
+                          >
+                            <Trash2 size={12} className="text-red-500" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Comment input */}
                 <div className="flex gap-2">
                   <img
-                    src={profile.avatar}
-                    alt={profile.name}
+                    src={'https://via.placeholder.com/28'}
+                    alt={currentUser?.username}
                     className="w-7 h-7 rounded-full object-cover flex-shrink-0"
                   />
                   <div
@@ -232,19 +439,16 @@ export function FeedPage() {
                       onChange={(e) =>
                         setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))
                       }
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleCommentSubmit(post.id);
+                        }
+                      }}
                       className="flex-1 bg-transparent outline-none text-sm"
                       style={{ color: '#3C3F20' }}
                     />
                     <button
-                      onClick={() => {
-                        if (!commentInputs[post.id]?.trim()) return;
-                        setPosts((prev) =>
-                          prev.map((p) =>
-                            p.id === post.id ? { ...p, comments: p.comments + 1 } : p
-                          )
-                        );
-                        setCommentInputs((prev) => ({ ...prev, [post.id]: '' }));
-                      }}
+                      onClick={() => handleCommentSubmit(post.id)}
                       className="flex-shrink-0 cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
                     >
                       <Send size={13} style={{ color: '#3C3F20' }} />

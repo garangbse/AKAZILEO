@@ -4,8 +4,6 @@ import { useAppContext } from '../context/AppContext';
 
   type TaskData = { title: string; description: string; payment:number; due_date:string; };
 
-   
-
   function CreateTaskForm({
     taskData,
     setTaskData,
@@ -48,7 +46,7 @@ import { useAppContext } from '../context/AppContext';
       />
 
       <input
-        type="string"
+        type="date"
         placeholder="Due_Date"
         value={taskData.due_date}
         onChange={(e) =>
@@ -119,6 +117,22 @@ export function AppModal() {
       confirmStyle: { backgroundColor: '#c0392b' },
       showCancel: true,
     },
+    'approve-application': {
+      icon: <CheckCircle size={28} style={{ color: '#BFC897' }} />,
+      title: 'Accept Application',
+      message: 'Are you sure you want to accept this application? The worker will be notified.',
+      confirmLabel: 'Accept',
+      confirmStyle: { backgroundColor: '#BFC897', color: '#3C3F20' },
+      showCancel: true,
+    },
+    'reject-application': {
+      icon: <XCircle size={28} className="text-red-500" />,
+      title: 'Reject Application',
+      message: 'Are you sure you want to reject this application?',
+      confirmLabel: 'Reject',
+      confirmStyle: { backgroundColor: '#c0392b' },
+      showCancel: true,
+    },
     delete: {
       icon: <Trash2 size={28} className="text-red-500" />,
       title: 'Delete Item',
@@ -143,6 +157,14 @@ export function AppModal() {
       confirmStyle: { backgroundColor: '#3C3F20' },
       showCancel: false,
     },
+    'apply-error': {
+      icon: <AlertCircle size={28} className="text-red-500" />,
+      title: modal.title || 'Application Failed',
+      message: modal.message || 'There was an error with your application. Please try again.',
+      confirmLabel: 'Close',
+      confirmStyle: { backgroundColor: '#3C3F20' },
+      showCancel: false,
+    },
     'add-portfolio': {
       icon: <CheckCircle size={28} style={{ color: '#BFC897' }} />,
       title: 'Portfolio Item Added',
@@ -159,6 +181,22 @@ export function AppModal() {
     confirmStyle: { backgroundColor: '#3C3F20' },
     showCancel: true,
   },
+    error: {
+      icon: <AlertCircle size={28} className="text-red-500" />,
+      title: modal.title || 'Error',
+      message: modal.message || 'An error occurred. Please try again.',
+      confirmLabel: 'Close',
+      confirmStyle: { backgroundColor: '#3C3F20' },
+      showCancel: false,
+    },
+    success: {
+      icon: <CheckCircle size={28} style={{ color: '#BFC897' }} />,
+      title: modal.title || 'Success',
+      message: modal.message || 'Operation completed successfully.',
+      confirmLabel: 'Done',
+      confirmStyle: { backgroundColor: '#3C3F20' },
+      showCancel: false,
+    },
   };
 
   const config = configs[modal.type];
@@ -200,7 +238,7 @@ export function AppModal() {
             {config.icon}
           </div>
           <h2 style={{ color: '#3C3F20' }}>{config.title}</h2>
-          {/* ✅ THIS IS WHERE YOUR FORM GOES */}
+          {/* */}
             {modal.type === 'create-task' ? (
               <CreateTaskForm taskData={taskData} setTaskData={setTaskData} />
             ) : (

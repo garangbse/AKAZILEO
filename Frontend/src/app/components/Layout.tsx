@@ -17,7 +17,7 @@ import { AppModal } from './AppModal';
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/marketplace', label: 'Task Marketplace', icon: ShoppingBag, end: false },
-  { to: '/portfolio', label: 'Portfolio', icon: Briefcase, end: false },
+  { to: '/portfolio', label: 'Portfolio', icon: Briefcase, end: false, workerOnly: true },
   { to: '/feed', label: 'Posts / Feed', icon: Rss, end: false },
   { to: '/settings', label: 'Settings', icon: Settings, end: false },
 ];
@@ -61,7 +61,9 @@ export function Layout() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {navItems.map((item) => (
+          {navItems
+            .filter((item) => !item.workerOnly || role === 'worker')
+            .map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

@@ -1,23 +1,23 @@
 export const WORKER_PROFILE = {
-  name: 'GON',
+  name: 'Your Name',
   avatar:
-    'Frontend/Public/HXH.png',
+    'https://via.placeholder.com/96',
   bio: 'UI/UX Designer & Frontend Developer with 5+ years of experience crafting beautiful digital products.',
-  tasksCompleted: 34,
-  portfolioCount: 8,
+  tasksCompleted: 0,
+  portfolioCount: 0,
   role: 'worker' as const,
   skills: ['UI/UX Design', 'React', 'Figma', 'Branding', 'CSS'],
 };
 
 export const EMPLOYER_PROFILE = {
-  name: 'LEOREO',
+  name: 'Your Company',
   avatar:
-    'Frontend/Public/HXH.png',
+    'https://via.placeholder.com/96',
   bio: 'Startup founder building tools for creative professionals. Always looking for talented freelancers.',
-  tasksPosted: 12,
-  activeTasksCount: 5,
+  tasksPosted: 0,
+  activeTasksCount: 0,
   role: 'employer' as const,
-  company: 'Carter & Co.',
+  company: 'Your Company Name',
 };
 
 export const TASKS = [
@@ -26,7 +26,7 @@ export const TASKS = [
     title: 'Design a Landing Page',
     description:
       'Create a modern landing page for a SaaS product. Must include hero, features, pricing, and CTA sections with mobile-responsive layouts.',
-    poster: 'LEOREO',
+    poster: 'Task Poster',
     posterAvatar:
       'Frontend/Public/HXH.png',
     category: 'Design',
@@ -47,14 +47,14 @@ export const TASKS = [
     status: 'In Progress',
     dueDate: '2026-04-05',
     completion: 60,
-    worker: 'GON',
+    worker: 'Assigned Worker',
   },
   {
     id: '3',
     title: 'Logo Branding Package',
     description:
       'Create a complete branding kit: primary logo, variants, color palette, and a comprehensive typography guide.',
-    poster: 'LEOREO',
+    poster: 'Task Poster',
     posterAvatar:
       'Frontend/Public/HXH.png',
     category: 'Branding',
@@ -75,21 +75,21 @@ export const TASKS = [
     status: 'Completed',
     dueDate: '2026-03-10',
     completion: 100,
-    worker: 'GON',
+    worker: 'Assigned Worker',
   },
   {
     id: '5',
     title: 'Mobile App UI Design',
     description:
       'Design high-fidelity screens for a fitness tracking mobile app. Deliverable: Figma file with all screens and a prototype.',
-    poster: 'LEOREO',
+    poster: 'Task Poster',
     posterAvatar:
       'Frontend/Public/HXH.png',
     category: 'Design',
     status: 'In Progress',
     dueDate: '2026-04-12',
     completion: 40,
-    worker: 'GON',
+    worker: 'Assigned Worker',
   },
   {
     id: '6',
@@ -157,7 +157,7 @@ export const PORTFOLIO_ITEMS = [
 export const FEED_POSTS = [
   {
     id: '1',
-    author: 'GON',
+    author: 'Community Member',
     authorAvatar:
       'Frontend/Public/HXH.png',
     role: 'worker',
@@ -172,7 +172,7 @@ export const FEED_POSTS = [
   },
   {
     id: '2',
-    author: 'LEOREO',
+    author: 'Community Member',
     authorAvatar:
       'Frontend/Public/HXH.png',
     role: 'employer',

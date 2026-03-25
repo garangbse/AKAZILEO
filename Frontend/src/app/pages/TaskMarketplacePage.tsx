@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Briefcase,
@@ -11,8 +11,8 @@ import {
   Calendar,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { TASKS } from '../data/mockData';
 import { useAppContext } from '../context/AppContext';
+import  { applyToTask, getUserApplications, getTasks } from '../../services/task';
 
 type Task = {
   id: number;
@@ -21,6 +21,7 @@ type Task = {
   payment: number;
   status: string;
   due_date?: string | null;
+  poster_id?: number;
 };
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
@@ -41,34 +42,113 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export function TaskMarketplacePage() {
   const navigate = useNavigate();
-  const { role ,openModal, tasks } = useAppContext();
+  const { role ,openModal, tasks, currentUser, setTasks } = useAppContext();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [roleMatch, setRoleMatch] = useState(false);
-  
+  const [myTasksOnly, setMyTasksOnly] = useState(false);
+  const [appliedTasks, setAppliedTasks] = useState<number[]>([]);
 
-  function TaskCard({ task }: { task: Task }) {
-    return (
-      <div className="p-4 rounded-xl shadow bg-white flex flex-col gap-2">
-        <h3 className="font-semibold">{task.title}</h3>
-        <p className="text-sm opacity-70">{task.description}</p>
+  // Fetch user's applied tasks on component mount
+  useEffect(() => {
+    const fetchAppliedTasks = async () => {
+      const token = localStorage.getItem('token');
+      if (!token || role !== 'worker') {
+        setAppliedTasks([]);
+        return;
+      }
+      
+      try {
+        const response = await getUserApplications(token);
+        if (response.status === 'success' && response.data) {
+          const appliedTaskIds = response.data.map((app: any) => app.task_id);
+          setAppliedTasks(appliedTaskIds);
+          console.log('[INIT DEBUG] Applied tasks loaded from backend:', appliedTaskIds);
+        }
+      } catch (error) {
+        console.error('[INIT DEBUG] Failed to fetch applied tasks:', error);
+      }
+    };
+    
+    fetchAppliedTasks();
+  }, [role]);
 
-        <div className="text-sm font-medium">
-          Payment: ${task.payment}
-        </div>
-      </div>
-    );
-  }
+  // Real-time task polling - fetch tasks every 15 seconds
+  useEffect(() => {
+    const fetchTasksRealTime = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      try {
+        const response = await getTasks(token);
+        if (response.status === 'success' && response.data) {
+          setTasks(response.data);
+          console.log('[POLLING] Tasks updated - new count:', response.data.length);
+        }
+      } catch (error) {
+        console.error('[POLLING] Failed to fetch tasks:', error);
+      }
+    };
+
+    // Initial fetch
+    fetchTasksRealTime();
+
+    // Poll every 15 seconds while on this page
+    const interval = setInterval(fetchTasksRealTime, 15000);
+
+    // Cleanup interval when component unmounts
+    return () => clearInterval(interval);
+  }, [setTasks]);
+
+  // DEBUG: Log current user on component mount
+  console.log('[MARKETPLACE DEBUG] Current User from Context:', currentUser);
+  console.log('[MARKETPLACE DEBUG] Current User Role:', role);
+
 
   const filtered = tasks.filter((t) => {
-  const matchesSearch =
-    t.title.toLowerCase().includes(search.toLowerCase()) ||
-    t.description.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch =
+      (t.title ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      (t.description ?? "").toLowerCase().includes(search.toLowerCase());
 
-  const matchesStatus = statusFilter === 'All' || t.status === statusFilter;
+    const matchesStatus = statusFilter === 'All' || t.status === statusFilter;
 
-  return matchesSearch && matchesStatus;
-});
+    // Apply "My Tasks" filter based on role
+    let matchesMyTasks = true;
+    if (myTasksOnly) {
+      if (role === 'employer') {
+        // Show only tasks posted by current user
+        matchesMyTasks = t.poster_id === currentUser?.id;
+      } else if (role === 'worker') {
+        // Show only tasks the user has applied to
+        matchesMyTasks = appliedTasks.includes(t.id);
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesMyTasks;
+  });
+
+  // Helper function to check if user can access task details
+  const canAccessTask = (task: Task): boolean => {
+    if (role === 'employer') {
+      // Employers can only access tasks they posted
+      return task.poster_id === currentUser?.id;
+    } else if (role === 'worker') {
+      // Workers can only access tasks they have been accepted for
+      return appliedTasks.includes(task.id);
+    }
+    return false;
+  };
+
+  // Helper function to handle unauthorized navigation attempt
+  const handleUnauthorizedAccess = () => {
+    const message =
+      role === 'employer'
+        ? 'You can only access tasks that you posted.'
+        : 'You can only access tasks you have been accepted for.';
+    openModal({
+      type: 'apply-error',
+      message: message,
+    });
+  };
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -107,7 +187,7 @@ export function TaskMarketplacePage() {
             style={{ backgroundColor: '#FDF9EB', color: '#3C3F20' }}
           >
             <option value="All">All Statuses</option>
-            <option value="Open">Open</option>
+            <option value="open">open</option>
             <option value="In Progress">In Progress</option>
             <option value="Completed">Completed</option>
           </select>
@@ -123,17 +203,17 @@ export function TaskMarketplacePage() {
           style={{ backgroundColor: '#FDF9EB' }}
         >
           <button
-            onClick={() => setRoleMatch(!roleMatch)}
+            onClick={() => setMyTasksOnly(!myTasksOnly)}
             className="relative w-9 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0"
-            style={{ backgroundColor: roleMatch ? '#BFC897' : '#C5BDAA' }}
+            style={{ backgroundColor: myTasksOnly ? '#BFC897' : '#C5BDAA' }}
           >
             <div
               className="absolute top-0.5 w-4 h-4 rounded-full shadow transition-all"
-              style={{ backgroundColor: '#3C3F20', left: roleMatch ? '18px' : '2px' }}
+              style={{ backgroundColor: '#3C3F20', left: myTasksOnly ? '18px' : '2px' }}
             />
           </button>
           <span className="text-sm whitespace-nowrap" style={{ color: '#3C3F20' }}>
-            Role Match
+            {role === 'employer' ? 'My Posted Tasks' : 'My Applications'}
           </span>
         </label>
 
@@ -175,7 +255,13 @@ export function TaskMarketplacePage() {
             key={task.id}
             className="rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group border-2 border-transparent hover:border-[#BFC897] flex flex-col"
             style={{ backgroundColor: '#E8E3C8' }}
-            onClick={() => navigate(`/tasks/${task.id}`)}
+            onClick={() => {
+              if (canAccessTask(task)) {
+                navigate(`/tasks/${task.id}`);
+              } else {
+                handleUnauthorizedAccess();
+              }
+            }}
           >
             {/* Top row */}
             <div className="flex items-center justify-between mb-3">
@@ -226,24 +312,106 @@ export function TaskMarketplacePage() {
             )}
 
             <div className="flex gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/tasks/${task.id}`);
-                }}
-                className="flex-1 py-2 rounded-xl text-xs text-white transition-all hover:opacity-90 cursor-pointer"
-                style={{ backgroundColor: '#3C3F20' }}
-              >
-                {role === 'worker' ? 'Apply' : 'Manage'}
-              </button>
+              {role === 'worker' ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+
+                    const token = localStorage.getItem('token') ?? undefined;
+
+                    // DEBUG: Log apply attempt
+                    console.log('[APPLY DEBUG] Attempting to apply to task:', {
+                      taskId: task.id,
+                      taskTitle: task.title,
+                      taskPosterId: task.poster_id,
+                      currentUserId: currentUser?.id,
+                      currentUserName: currentUser?.username,
+                      token: token ? 'Token present' : 'No token'
+                    });
+
+                    applyToTask(task.id, token)
+                      .then((res: any) => {
+                        console.log('[APPLY DEBUG] Response from backend:', res);
+                        
+                        if (res.status === 'success') {
+                          setAppliedTasks(prev => [...prev, task.id]);
+                          openModal({ type: 'upload-success' });
+                        } else if (res.status === 'error') {
+                          const errorMessage = res.message || 'Unknown error';
+                          let displayMessage = '';
+                          
+                          if (errorMessage.includes('Already applied')) {
+                            displayMessage = 'You have already applied to this task.';
+                          } else if (errorMessage.includes('cannot apply to your own task')) {
+                            displayMessage = 'You cannot apply to your own task.';
+                          } else {
+                            displayMessage = errorMessage;
+                          }
+                          
+                          openModal({ 
+                            type: 'apply-error',
+                            message: displayMessage 
+                          });
+                        }
+                      })
+                      .catch((err: any) => {
+                        console.error('Apply error:', err);
+                        openModal({ 
+                          type: 'apply-error',
+                          message: 'There was an error submitting your application. Please try again.'
+                        });
+                      });
+                  }}
+                  disabled={appliedTasks.includes(task.id)}
+                  className="flex-1 py-2 rounded-xl text-xs transition-all cursor-pointer"
+                  style={{
+                    backgroundColor: appliedTasks.includes(task.id) ? '#D0CBAF' : '#3C3F20',
+                    color: appliedTasks.includes(task.id) ? '#6B6B5C' : '#FDF9EB',
+                    opacity: appliedTasks.includes(task.id) ? 0.7 : 1,
+                    cursor: appliedTasks.includes(task.id) ? 'default' : 'pointer'
+                  }}
+                >
+                  {appliedTasks.includes(task.id) ? 'Applied' : 'Apply'}
+                </button>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (canAccessTask(task)) {
+                      navigate(`/tasks/${task.id}`);
+                    } else {
+                      handleUnauthorizedAccess();
+                    }
+                  }}
+                  disabled={!canAccessTask(task)}
+                  className="flex-1 py-2 rounded-xl text-xs text-white transition-all hover:opacity-90 cursor-pointer"
+                  style={{
+                    backgroundColor: canAccessTask(task) ? '#3C3F20' : '#C5BDAA',
+                    cursor: canAccessTask(task) ? 'pointer' : 'not-allowed',
+                    opacity: canAccessTask(task) ? 1 : 0.6,
+                  }}
+                >
+                  Manage
+                </button>
+              )}
 
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/tasks/${task.id}`);
+                  if (canAccessTask(task)) {
+                    navigate(`/tasks/${task.id}`);
+                  } else {
+                    handleUnauthorizedAccess();
+                  }
                 }}
+                disabled={!canAccessTask(task)}
                 className="px-3 py-2 rounded-xl text-xs transition-all hover:opacity-85 cursor-pointer"
-                style={{ backgroundColor: '#BFC897', color: '#3C3F20' }}
+                style={{
+                  backgroundColor: canAccessTask(task) ? '#BFC897' : '#D0CBAF',
+                  color: '#3C3F20',
+                  cursor: canAccessTask(task) ? 'pointer' : 'not-allowed',
+                  opacity: canAccessTask(task) ? 1 : 0.6,
+                }}
               >
                 Details
               </button>

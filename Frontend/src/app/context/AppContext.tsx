@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../../services/api';
+import { createTask, getTasks } from '../../services/task';
 
 export type Role = 'worker' | 'employer';
 
@@ -11,18 +12,24 @@ export type Task = {
   status: string;
   payment: number;
   due_date: string | null;
+  poster_id?: number;
 };
 
 export interface ModalConfig {
   type:
     | 'confirm-submit'
     | 'approve'
+    | 'approve-application'
     | 'reject'
+    | 'reject-application'
     | 'delete'
     | 'upload-success'
     | 'upload-error'
+    | 'apply-error'
     | 'add-portfolio'
     | 'create-task'
+    | 'error'
+    | 'success'
     | null;
   title?: string;
   message?: string;
@@ -44,8 +51,9 @@ interface AppContextType {
 
   isAuthenticated: boolean;
   userProfile: UserProfile;
+  currentUser: { id?: number; username?: string; email?: string } | null;
 
-  login: (roles: Role[], selectedRole: Role, name: string, email: string) => void;
+  login: (roles: Role[], selectedRole: Role, id: number, name: string, email: string) => void;
   logout: () => void;
 
   updateUserProfile: (updates: Partial<UserProfile>) => void;
@@ -66,6 +74,7 @@ const AppContext = createContext<AppContextType>({
 
   isAuthenticated: false,
   userProfile: { name: '', email: '' },
+  currentUser: null,
 
   login: () => {},
   logout: () => {},
@@ -88,20 +97,82 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [modal, setModal] = useState<ModalConfig>({ type: null });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile>({ name: '', email: '' });
+  const [currentUser, setCurrentUser] = useState<{ id?: number; username?: string; email?: string } | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+
+  // Restore session from localStorage on app load
+  useEffect(() => {
+    const restoreSession = async () => {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.log('[SESSION] No token found in localStorage');
+        return;
+      }
+      
+      try {
+        console.log('[SESSION] Attempting to restore session from token');
+        const response = await api('/me', 'GET', undefined, token);
+        
+        if (response.status === 'success' && response.data) {
+          const { id, username, email, roles: userRoles } = response.data;
+          
+          // Restore the first available role (or 'worker' as default)
+          const selectedRole = userRoles && userRoles.length > 0 ? userRoles[0] : 'worker';
+          
+          // Call login to restore state
+          setRoles(userRoles);
+          setRole(selectedRole);
+          setUserProfile({ name: username, email });
+          setCurrentUser({ id, username, email });
+          setIsAuthenticated(true);
+          
+          console.log('[SESSION] Session restored:', { id, username, role: selectedRole });
+        }
+      } catch (error) {
+        console.error('[SESSION] Failed to restore session:', error);
+        // Clear invalid token
+        localStorage.removeItem('token');
+      }
+    };
+    
+    restoreSession();
+  }, []);
+
+    useEffect(() => {
+      const fetchTasks = async () => {
+        const token = localStorage.getItem('token') ?? undefined;
+        try {
+          const response = await getTasks(token);
+          console.log('[TASKS] Tasks fetched:', response);
+          if (response.status === 'success' && response.data) {
+            setTasks(response.data);
+          } else {
+            setTasks([]);
+          }
+        } catch (error) {
+          console.error('[TASKS] Failed to fetch tasks:', error);
+          setTasks([]);
+        }
+      };
+
+      fetchTasks();
+    }, [isAuthenticated]);
  
 
   // ✅ Signature now matches the interface
-  const login = (roles: Role[], selectedRole: Role, name: string, email: string) => {
+  const login = (roles: Role[], selectedRole: Role, id: number, name: string, email: string) => {
   setRoles(roles);
   setRole(selectedRole);
   setUserProfile({ name, email });
+  setCurrentUser({ id, username: name, email });
   setIsAuthenticated(true);
 };
 
   const logout = () => {
     setIsAuthenticated(false);
     setUserProfile({ name: '', email: '' });
+    setCurrentUser(null);
     setRoles([]);  // ✅ clear roles on logout
   };
 
@@ -109,17 +180,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUserProfile((prev) => ({ ...prev, ...updates }));
   };
 
-  const addTask = (taskData: { title: string; description: string ;payment: number; due_date: string}) => {
-    const newTask: Task = {
-      id: Date.now(),
-      title: taskData.title,
-      description: taskData.description,
-      status: 'Open',
-      payment: taskData.payment,
-      due_date:taskData.due_date,
-    };
+  const addTask = async (taskData: {
+    title: string;
+    description: string;
+    payment: number;
+    due_date: string;
+  }) => {
+    const token = localStorage.getItem('token') ?? undefined;
 
-    setTasks((prev) => [...prev, newTask]);
+    await createTask(taskData, token);
+
+    const res = await getTasks(token);
+    setTasks(res.data);
   };
 
   /*Makes everything in it  accessible anywhere via useAppContext().*/
@@ -132,6 +204,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         isAuthenticated,
         userProfile,
+        currentUser,
 
         login,
         logout,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Edit2,
   CheckCircle2,
@@ -11,10 +11,11 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { WORKER_PROFILE, EMPLOYER_PROFILE, TASKS, PORTFOLIO_ITEMS } from '../data/mockData';
+import { WORKER_PROFILE, EMPLOYER_PROFILE, PORTFOLIO_ITEMS } from '../data/mockData';
+import { getAcceptedTasks, getTasksByPosterId } from '../../services/task';
 
 export function ProfilePage() {
-  const { role } = useAppContext();
+  const { role, currentUser } = useAppContext();
   const navigate = useNavigate();
   const isWorker = role === 'worker';
   const base = isWorker ? WORKER_PROFILE : EMPLOYER_PROFILE;
@@ -22,9 +23,36 @@ export function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(base.name);
   const [bio, setBio] = useState(base.bio);
+  const [userTasks, setUserTasks] = useState<any[]>([]);
 
-  const workerTasks = TASKS.filter((t) => t.worker === 'GON');
-  const employerTasks = TASKS.filter((t) => t.poster === 'LEOREO');
+  // Fetch user's tasks based on role
+  useEffect(() => {
+    const fetchTasks = async () => {
+      const token = localStorage.getItem('token');
+      if (!token || !currentUser?.id) return;
+
+      try {
+        if (isWorker) {
+          // Fetch accepted tasks for workers
+          const response = await getAcceptedTasks(token);
+          if (response.status === 'success' && response.data) {
+            setUserTasks(response.data.slice(0, 5));
+          }
+        } else {
+          // Fetch posted tasks for employers
+          const response = await getTasksByPosterId(currentUser.id, token);
+          if (response.status === 'success' && response.data) {
+            setUserTasks(response.data.slice(0, 5));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch tasks:', error);
+        setUserTasks([]);
+      }
+    };
+
+    fetchTasks();
+  }, [isWorker, currentUser?.id]);
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -279,7 +307,7 @@ export function ProfilePage() {
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {workerTasks.map((task) => (
+                  {userTasks.map((task) => (
                     <div
                       key={task.id}
                       onClick={() => navigate(`/tasks/${task.id}`)}
@@ -331,7 +359,7 @@ export function ProfilePage() {
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {employerTasks.map((task) => (
+                  {userTasks.map((task) => (
                     <div
                       key={task.id}
                       onClick={() => navigate(`/tasks/${task.id}`)}
