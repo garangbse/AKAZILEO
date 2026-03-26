@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, Share2, Image, Send, Trash2, X } from 'lucide-react';
+import { Heart, MessageCircle, Image, Send, Trash2, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { api, fileToBase64 } from "../../services/api";
 
@@ -445,14 +445,6 @@ export function FeedPage() {
               >
                 <MessageCircle size={14} />
                 <span>{post.comments.length}</span>
-              </button>
-
-              <button
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm transition-all hover:opacity-80 cursor-pointer ml-auto"
-                style={{ color: '#3C3F20' }}
-              >
-                <Share2 size={14} />
-                <span>Share</span>
               </button>
             </div>
 

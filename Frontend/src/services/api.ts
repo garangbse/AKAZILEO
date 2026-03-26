@@ -52,4 +52,9 @@ export const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+// Delete user account
+export const deleteUserAccount = async (userId: number, token: string) => {
+  return api(`/users/${userId}`, 'DELETE', undefined, token);
+};
+
 

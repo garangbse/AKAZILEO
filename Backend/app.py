@@ -159,6 +159,62 @@ def update_user(current_user, user_id):
     session.close()
     return jsonify({"status": "success", "data": "Profile updated"})
 
+@app.route("/users/<int:user_id>", methods=["DELETE"])
+@token_required
+def delete_user(current_user, user_id):
+    # Verify authorization - user can only delete their own account
+    if current_user.id != user_id:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+    
+    session = Session()
+    try:
+        user = session.query(User).filter_by(id=user_id).first()
+        if not user:
+            session.close()
+            return jsonify({"status": "error", "message": "User not found"}), 404
+        
+        # Delete all related data
+        # Delete posts and their associated likes and comments (cascade handles this)
+        session.query(Post).filter_by(user_id=user_id).delete()
+        
+        # Delete comments
+        session.query(Comment).filter_by(user_id=user_id).delete()
+        
+        # Delete likes
+        session.query(Like).filter_by(user_id=user_id).delete()
+        
+        # Delete portfolio items
+        session.query(Portfolio).filter_by(user_id=user_id).delete()
+        
+        # Delete task submissions
+        session.query(TaskSubmission).filter_by(worker_id=user_id).delete()
+        
+        # Delete task applications
+        session.query(TaskApplication).filter_by(worker_id=user_id).delete()
+        
+        # Delete tasks posted by user
+        session.query(Task).filter_by(poster_id=user_id).delete()
+        
+        # Delete user roles
+        session.query(UserRole).filter_by(user_id=user_id).delete()
+        
+        # Delete notifications
+        session.query(Notification).filter_by(user_id=user_id).delete()
+        
+        # Finally, delete the user
+        session.delete(user)
+        
+        session.commit()
+        session.close()
+        
+        return jsonify({"status": "success", "message": "Account deleted successfully"})
+    
+    except Exception as e:
+        session.rollback()
+        session.close()
+        print(f"Error deleting user: {str(e)}")
+        return jsonify({"status": "error", "message": "Failed to delete account"}), 500
+
 # --- TASK ROUTES ---
 @app.route("/tasks", methods=["GET"])
 @token_required

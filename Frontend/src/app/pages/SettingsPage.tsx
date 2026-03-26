@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bell,
   Lock,
@@ -10,7 +11,9 @@ import {
   Globe,
   ChevronRight,
 } from 'lucide-react';
+import { useAppContext } from '../context/AppContext';
 import { getNotifications, markNotificationRead } from '../../services/task';
+import { deleteUserAccount } from '../../services/api';
 
 type SettingGroup = {
   label: string;
@@ -89,10 +92,14 @@ const SETTING_GROUPS: SettingGroup[] = [
 ];
 
 export function SettingsPage() {
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAppContext();
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [notificationError, setNotificationError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     if (activeItem === 'Notifications') {
@@ -145,6 +152,36 @@ export function SettingsPage() {
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
       setNotificationError('Failed to update notification. Please try again.');
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !currentUser?.id) return;
+
+    setDeleteLoading(true);
+    try {
+      const response = await deleteUserAccount(currentUser.id, token);
+      if (response.status === 'success') {
+        // Clear authentication data
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
+        
+        // Logout from context
+        logout();
+        
+        // Navigate to login page
+        navigate('/login', { replace: true });
+      } else {
+        alert(response.message || 'Failed to delete account');
+        setDeleteConfirm(false);
+      }
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      alert('Failed to delete account. Please try again.');
+      setDeleteConfirm(false);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -312,6 +349,56 @@ export function SettingsPage() {
                       </button>
                     </div>
                   </div>
+                ) : activeItem === 'Delete Account' ? (
+                  <>
+                    {!deleteConfirm ? (
+                      <>
+                        <p className="text-sm" style={{ color: '#3C3F20' }}>
+                          Are you sure you want to delete your account? This action cannot be undone. All your data including tasks, submissions, portfolio items, and posts will be permanently deleted.
+                        </p>
+                        <div className="flex gap-3 mt-6">
+                          <button
+                            onClick={() => setDeleteConfirm(true)}
+                            className="flex-1 px-4 py-2 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer"
+                            style={{ backgroundColor: '#ef4444' }}
+                          >
+                            Yes, Delete My Account
+                          </button>
+                          <button
+                            onClick={() => setActiveItem(null)}
+                            className="flex-1 px-4 py-2 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer"
+                            style={{ backgroundColor: '#3C3F20' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium" style={{ color: '#ef4444' }}>
+                          Type "DELETE" to confirm account deletion:
+                        </p>
+                        <div className="mt-4 flex gap-3">
+                          <button
+                            onClick={handleDeleteAccount}
+                            disabled={deleteLoading}
+                            className="flex-1 px-4 py-2 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{ backgroundColor: '#ef4444' }}
+                          >
+                            {deleteLoading ? 'Deleting...' : 'Permanently Delete Account'}
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirm(false)}
+                            disabled={deleteLoading}
+                            className="flex-1 px-4 py-2 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{ backgroundColor: '#3C3F20' }}
+                          >
+                            Back
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
                 ) : (
                   <>
                     <p className="text-sm opacity-60 text-center" style={{ color: '#3C3F20' }}>
