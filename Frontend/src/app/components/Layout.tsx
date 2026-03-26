@@ -29,6 +29,10 @@ export function Layout() {
   console.log("GUARD AUTH",isAuthenticated)
   const navigate = useNavigate();
   const [profilePicture, setProfilePicture] = useState<string | null>(currentUser?.profile_picture || null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   // Listen to context profilePicture changes and update local state
   useEffect(() => {
@@ -58,12 +62,45 @@ export function Layout() {
     fetchProfilePicture();
   }, [currentUser?.id]);
 
+  // Handle search functionality
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await api(`/users/search?q=${encodeURIComponent(query)}`, 'GET', undefined, token);
+      if (response.status === 'success' && response.data) {
+        setSearchResults(response.data);
+        setShowResults(true);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleProfileSelect = (userId: number) => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowResults(false);
+    navigate(`/profile/${userId}`);
+  };
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   
   const profile = role === 'worker' ? WORKER_PROFILE : EMPLOYER_PROFILE;
-  const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <div className="flex h-screen w-full overflow-hidden" style={{ backgroundColor: '#FDF9EB' }}>
@@ -144,19 +181,56 @@ export function Layout() {
           className="sticky top-0 z-10 flex items-center gap-4 px-6 h-14 border-b flex-shrink-0"
           style={{ backgroundColor: '#FDF9EB', borderColor: '#E0DBC5' }}
         >
-          <div
-            className="flex items-center gap-2 rounded-xl px-3 py-2 flex-1 max-w-sm"
-            style={{ backgroundColor: '#E8E3C8' }}
-          >
-            <Search size={14} style={{ color: '#3C3F20' }} className="opacity-50 flex-shrink-0" />
-            <input
-              type="text"
-              placeholder="Search tasks, workers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 bg-transparent outline-none text-sm placeholder-[#3C3F20]/40"
-              style={{ color: '#3C3F20' }}
-            />
+          <div className="relative flex-1 max-w-sm">
+            <div
+              className="flex items-center gap-2 rounded-xl px-3 py-2"
+              style={{ backgroundColor: '#E8E3C8' }}
+            >
+              <Search size={14} style={{ color: '#3C3F20' }} className="opacity-50 flex-shrink-0" />
+              <input
+                type="text"
+                placeholder="Search profiles..."
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                onFocus={() => searchResults.length > 0 && setShowResults(true)}
+                className="flex-1 bg-transparent outline-none text-sm placeholder-[#3C3F20]/40"
+                style={{ color: '#3C3F20' }}
+              />
+            </div>
+            {showResults && searchResults.length > 0 && (
+              <div
+                className="absolute top-full left-0 right-0 mt-2 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto"
+                style={{ backgroundColor: '#FDF9EB', borderColor: '#E0DBC5', border: '1px solid #E0DBC5' }}
+              >
+                {searchResults.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors border-b border-gray-200 last:border-b-0"
+                    onClick={() => handleProfileSelect(user.id)}
+                  >
+                    <img
+                      src={
+                        user.profile_picture
+                          ? user.profile_picture.startsWith('data:')
+                            ? user.profile_picture
+                            : `data:image/png;base64,${user.profile_picture}`
+                          : 'https://via.placeholder.com/40'
+                      }
+                      alt={user.username}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium" style={{ color: '#3C3F20' }}>
+                        {user.username}
+                      </p>
+                      <p className="text-xs opacity-50" style={{ color: '#3C3F20' }}>
+                        {user.role}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex-1" />

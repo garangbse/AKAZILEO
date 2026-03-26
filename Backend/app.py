@@ -127,17 +127,60 @@ def get_user(current_user, user_id):
     if not user:
         session.close()
         return jsonify({"status": "error", "message": "User not found"}), 404
+    
+    roles = [role.role.name for role in user.roles]
+    role = roles[0] if roles else 'user'
+    
     result = {
         "id": user.id,
         "username": user.username,
         "bio": user.bio,
         "profile_picture": user.profile_picture,
         "website": user.website,
-        "roles": [role.role.name for role in user.roles],
+        "role": role,
+        "roles": roles,
         "created_at": user.created_at
     }
     session.close()
     return jsonify({"status": "success", "data": result})
+
+@app.route("/users/search", methods=["GET"])
+@token_required
+def search_users(current_user):
+    query = request.args.get('q', '').strip()
+    if not query or len(query) < 2:
+        return jsonify({"status": "error", "message": "Search query too short"}), 400
+    
+    session = Session()
+    try:
+        # Search for users by username or email
+        users = session.query(User).filter(
+            (User.username.ilike(f'%{query}%')) | 
+            (User.email.ilike(f'%{query}%'))
+        ).limit(10).all()
+        
+        results = []
+        for user in users:
+            # Get the user's first role
+            roles = [role.role.name for role in user.roles]
+            role = roles[0] if roles else 'user'
+            
+            results.append({
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "bio": user.bio,
+                "profile_picture": user.profile_picture,
+                "role": role
+            })
+        
+        session.close()
+        return jsonify({"status": "success", "data": results})
+    except Exception as e:
+        session.close()
+        print(f"Search error: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 #not yet
 @app.route("/users/<int:user_id>", methods=["PUT"])
 @token_required
@@ -268,9 +311,11 @@ def get_tasks(current_user):
             "id": task.id,
             "title": task.title,
             "description": task.description,
+            "payment": task.payment,
             "status": task.status,
             "due_date": task.due_date,
-            "poster_id": task.poster_id
+            "poster_id": task.poster_id,
+            "created_at": str(task.created_at)
         })
     session.close()
     return jsonify({"status": "success", "data": result})

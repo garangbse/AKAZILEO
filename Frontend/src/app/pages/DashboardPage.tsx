@@ -51,23 +51,6 @@ function TaskCard({ task, onClick }: { task: (typeof TASKS)[0]; onClick: () => v
         {task.description}
       </p>
 
-      <div className="mb-3">
-        <div className="flex justify-between items-center mb-1.5">
-          <span className="text-xs opacity-45" style={{ color: '#3C3F20' }}>
-            Progress
-          </span>
-          <span className="text-xs" style={{ color: '#3C3F20' }}>
-            {task.completion}%
-          </span>
-        </div>
-        <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#D0CBAF' }}>
-          <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${task.completion}%`, backgroundColor: '#BFC897' }}
-          />
-        </div>
-      </div>
-
       <div className="flex items-center gap-1.5">
         <img
           src={task.posterAvatar}
@@ -273,9 +256,6 @@ export function DashboardPage() {
             >
               {role}
             </span>
-            <p className="text-xs opacity-55 mb-5 leading-relaxed px-2" style={{ color: '#3C3F20' }}>
-              {profile.bio}
-            </p>
 
             <div className="grid grid-cols-2 gap-3 mb-5">
               {isWorker ? (

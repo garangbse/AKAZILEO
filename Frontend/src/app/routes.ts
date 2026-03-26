@@ -21,6 +21,7 @@ export const router = createBrowserRouter([
       { path: 'portfolio', Component: PortfolioPage },
       { path: 'feed', Component: FeedPage },
       { path: 'profile', Component: ProfilePage },
+      { path: 'profile/:userId', Component: ProfilePage },
       { path: 'settings', Component: SettingsPage },
     ],
   },

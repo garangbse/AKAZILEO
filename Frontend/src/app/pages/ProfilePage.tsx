@@ -1,48 +1,66 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Edit2,
-  CheckCircle2,
-  Layers,
-  TrendingUp,
-  Clock,
-  ArrowRight,
   Save,
   X,
   Camera,
+  ExternalLink,
+  Calendar,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { getAcceptedTasks, getTasksByPosterId } from '../../services/task';
 import { api, fileToBase64 } from '../../services/api';
+import { getUserPortfolio } from '../../services/portfolio';
 
 export function ProfilePage() {
   const { role, currentUser, openModal, updateCurrentUser } = useAppContext();
   const navigate = useNavigate();
+  const { userId } = useParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isWorker = role === 'worker';
+  
+  // Determine if viewing own profile or another user's profile
+  const viewingOwnProfile = !userId || parseInt(userId) === currentUser?.id;
+  const targetUserId = userId ? parseInt(userId) : currentUser?.id;
 
   const [editing, setEditing] = useState(false);
   const [bio, setBio] = useState(currentUser?.bio || '');
   const [profilePicture, setProfilePicture] = useState<string | null>(currentUser?.profile_picture || null);
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
-  const [userTasks, setUserTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [viewedUserData, setViewedUserData] = useState<any>(null);
+  const [viewedUserRole, setViewedUserRole] = useState<string | null>(null);
+  const [portfolioItems, setPortfolioItems] = useState<any[]>([]);
+  const [portfolioLoading, setPortfolioLoading] = useState(false);
 
   // Fetch user profile including profile picture on mount
   useEffect(() => {
     const fetchUserProfile = async () => {
       const token = localStorage.getItem('token');
-      if (!token || !currentUser?.id) return;
+      if (!token || !targetUserId) return;
 
       try {
-        const response = await api(`/users/${currentUser.id}`, 'GET', undefined, token);
+        const response = await api(`/users/${targetUserId}`, 'GET', undefined, token);
         if (response.status === 'success' && response.data) {
-          const { bio: fetchedBio, profile_picture: fetchedProfilePicture } = response.data;
-          if (fetchedBio) setBio(fetchedBio);
-          if (fetchedProfilePicture) {
-            setProfilePicture(fetchedProfilePicture);
+          const { bio: fetchedBio, profile_picture: fetchedProfilePicture, role: fetchedRole, username } = response.data;
+          
+          if (viewingOwnProfile) {
+            // Edit own profile
+            if (fetchedBio) setBio(fetchedBio);
+            if (fetchedProfilePicture) {
+              setProfilePicture(fetchedProfilePicture);
+            }
+          } else {
+            // View another user's profile (read-only)
+            setViewedUserData({
+              username: username,
+              bio: fetchedBio,
+              profile_picture: fetchedProfilePicture,
+            });
+            setViewedUserRole(fetchedRole);
           }
-          console.log('[PROFILE] User profile fetched:', { bio: fetchedBio, hasPicture: !!fetchedProfilePicture });
+          
+          console.log('[PROFILE] User profile fetched:', { bio: fetchedBio, hasPicture: !!fetchedProfilePicture, isOwn: viewingOwnProfile });
         }
       } catch (error) {
         console.error('[PROFILE] Failed to fetch user profile:', error);
@@ -50,36 +68,36 @@ export function ProfilePage() {
     };
 
     fetchUserProfile();
-  }, [currentUser?.id]);
+  }, [targetUserId, viewingOwnProfile]);
 
-  // Fetch user's tasks based on role
+  // Fetch portfolio items when viewing another user's profile
   useEffect(() => {
-    const fetchTasks = async () => {
+    const fetchPortfolio = async () => {
+      // Only fetch if viewing another user's profile and they are a worker
+      if (viewingOwnProfile) {
+        setPortfolioItems([]);
+        return;
+      }
+
       const token = localStorage.getItem('token');
-      if (!token || !currentUser?.id) return;
+      if (!token || !targetUserId) return;
 
       try {
-        if (isWorker) {
-          // Fetch accepted tasks for workers
-          const response = await getAcceptedTasks(token);
-          if (response.status === 'success' && response.data) {
-            setUserTasks(response.data.slice(0, 5));
-          }
-        } else {
-          // Fetch posted tasks for employers
-          const response = await getTasksByPosterId(currentUser.id, token);
-          if (response.status === 'success' && response.data) {
-            setUserTasks(response.data.slice(0, 5));
-          }
+        setPortfolioLoading(true);
+        const res = await getUserPortfolio(targetUserId, token);
+        if (res.status === 'success') {
+          setPortfolioItems(res.data || []);
         }
-      } catch (error) {
-        console.error('Failed to fetch tasks:', error);
-        setUserTasks([]);
+      } catch (err) {
+        console.error('[PROFILE] Error fetching portfolio:', err);
+        setPortfolioItems([]);
+      } finally {
+        setPortfolioLoading(false);
       }
     };
 
-    fetchTasks();
-  }, [isWorker, currentUser?.id]);
+    fetchPortfolio();
+  }, [targetUserId, viewingOwnProfile]);
 
   const handleProfilePictureSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -157,13 +175,19 @@ export function ProfilePage() {
           <div className="relative inline-block mb-4 group">
             <img
               src={
-                profilePicture
-                  ? profilePicture.startsWith('data:')
-                    ? profilePicture
-                    : `data:image/png;base64,${profilePicture}`
-                  : 'https://via.placeholder.com/96'
+                viewingOwnProfile
+                  ? profilePicture
+                    ? profilePicture.startsWith('data:')
+                      ? profilePicture
+                      : `data:image/png;base64,${profilePicture}`
+                    : 'https://via.placeholder.com/96'
+                  : viewedUserData?.profile_picture
+                    ? viewedUserData.profile_picture.startsWith('data:')
+                      ? viewedUserData.profile_picture
+                      : `data:image/png;base64,${viewedUserData.profile_picture}`
+                    : 'https://via.placeholder.com/96'
               }
-              alt={currentUser?.username}
+              alt={viewingOwnProfile ? currentUser?.username : viewedUserData?.username}
               className="w-24 h-24 rounded-full object-cover border-4"
               style={{ borderColor: '#BFC897' }}
             />
@@ -173,7 +197,7 @@ export function ProfilePage() {
             >
               <span className="w-2 h-2 rounded-full bg-white" />
             </span>
-            {editing && (
+            {editing && viewingOwnProfile && (
               <label
                 className="absolute inset-0 rounded-full flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
               >
@@ -241,170 +265,130 @@ export function ProfilePage() {
           ) : (
             <>
               <h2 className="mb-0.5" style={{ color: '#3C3F20' }}>
-                {currentUser?.username}
+                {viewingOwnProfile ? currentUser?.username : viewedUserData?.username}
               </h2>
               <span
                 className="text-xs px-2.5 py-0.5 rounded-full inline-block mb-3 capitalize"
                 style={{ backgroundColor: '#BFC897', color: '#3C3F20' }}
               >
-                {role}
+                {viewingOwnProfile ? role : viewedUserRole}
               </span>
               <p
                 className="text-xs opacity-55 mb-5 leading-relaxed px-2"
                 style={{ color: '#3C3F20' }}
               >
-                {bio || 'No bio yet'}
+                {viewingOwnProfile ? (bio || 'No bio yet') : (viewedUserData?.bio || 'No bio yet')}
               </p>
-              <button
-                onClick={() => setEditing(true)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer"
-                style={{ backgroundColor: '#3C3F20' }}
-              >
-                <Edit2 size={13} />
-                Edit Profile
-              </button>
+              {viewingOwnProfile && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer"
+                  style={{ backgroundColor: '#3C3F20' }}
+                >
+                  <Edit2 size={13} />
+                  Edit Profile
+                </button>
+              )}
             </>
           )}
         </div>
-
-          {/* Stats */}
-          <div
-            className="rounded-2xl p-5 shadow-sm"
-            style={{ backgroundColor: '#E8E3C8' }}
-          >
-            <h4 className="mb-4 opacity-55" style={{ color: '#3C3F20' }}>
-              Stats
-            </h4>
-            <div className="space-y-3">
-              {isWorker ? (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 size={14} style={{ color: '#BFC897' }} />
-                      <span className="text-sm" style={{ color: '#3C3F20' }}>
-                        Active Tasks
-                      </span>
-                    </div>
-                    <span
-                      className="text-sm px-2.5 py-0.5 rounded-lg"
-                      style={{ backgroundColor: '#FDF9EB', color: '#3C3F20' }}
-                    >
-                      {userTasks.length}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp size={14} style={{ color: '#BFC897' }} />
-                      <span className="text-sm" style={{ color: '#3C3F20' }}>
-                        Tasks Posted
-                      </span>
-                    </div>
-                    <span
-                      className="text-sm px-2.5 py-0.5 rounded-lg"
-                      style={{ backgroundColor: '#FDF9EB', color: '#3C3F20' }}
-                    >
-                      {userTasks.length}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+      </div>
 
         {/* ── Right column ── */}
         <div className="lg:col-span-2 space-y-5">
-          {isWorker ? (
-            <>
-              {/* Task history */}
-              <div
-                className="rounded-2xl p-6 shadow-sm"
-                style={{ backgroundColor: '#E8E3C8' }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 style={{ color: '#3C3F20' }}>Recent Tasks</h3>
-                  <button
-                    onClick={() => navigate('/marketplace')}
-                    className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl transition-all hover:opacity-85 cursor-pointer"
-                    style={{ backgroundColor: '#BFC897', color: '#3C3F20' }}
-                  >
-                    All Tasks <ArrowRight size={12} />
-                  </button>
+          {/* Portfolio Section - Only show when viewing another user's profile */}
+          {!viewingOwnProfile && viewedUserRole === 'worker' && (
+            <div>
+              <h3 className="mb-4 font-semibold" style={{ color: '#3C3F20' }}>
+                Portfolio
+              </h3>
+              {portfolioLoading ? (
+                <div
+                  className="rounded-2xl p-8 text-center"
+                  style={{ backgroundColor: '#E8E3C8' }}
+                >
+                  <p className="opacity-50" style={{ color: '#3C3F20' }}>
+                    Loading portfolio...
+                  </p>
                 </div>
-                {userTasks.length > 0 ? (
-                  <div className="space-y-2">
-                    {userTasks.map((task) => (
-                      <div
-                        key={task.id}
-                        onClick={() => navigate(`/tasks/${task.id}`)}
-                        className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:border-[#BFC897] border-2 border-transparent transition-all"
-                        style={{ backgroundColor: '#FDF9EB' }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm truncate" style={{ color: '#3C3F20' }}>
-                            {task.title}
-                          </p>
-                          <p className="text-xs opacity-40" style={{ color: '#3C3F20' }}>
-                            {task.status || 'Open'}
-                          </p>
+              ) : portfolioItems.length === 0 ? (
+                <div
+                  className="rounded-2xl p-8 text-center"
+                  style={{ backgroundColor: '#E8E3C8' }}
+                >
+                  <p className="opacity-50" style={{ color: '#3C3F20' }}>
+                    No portfolio items yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {portfolioItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all group border-2 border-transparent hover:border-[#BFC897]"
+                      style={{ backgroundColor: '#E8E3C8' }}
+                    >
+                      {/* Thumbnail */}
+                      <div className="relative overflow-hidden h-32">
+                        <img
+                          src={
+                            item.media_file
+                              ? `data:image/png;base64,${item.media_file}`
+                              : 'https://via.placeholder.com/300x200?text=No+Image'
+                          }
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
+                        <a
+                          href={item.project_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute top-2.5 right-2.5 w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ backgroundColor: '#BFC897' }}
+                        >
+                          <ExternalLink size={13} style={{ color: '#3C3F20' }} />
+                        </a>
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-3">
+                        <h4 className="mb-1 truncate text-sm" style={{ color: '#3C3F20' }}>
+                          {item.title}
+                        </h4>
+                        <p
+                          className="text-xs opacity-55 line-clamp-2 leading-relaxed mb-2"
+                          style={{ color: '#3C3F20' }}
+                        >
+                          {item.description || 'No description'}
+                        </p>
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <Calendar size={10} style={{ color: '#3C3F20' }} className="opacity-35" />
+                            <span className="text-xs opacity-35" style={{ color: '#3C3F20' }}>
+                              {item.created_at
+                                ? new Date(item.created_at).toLocaleDateString()
+                                : 'Just now'}
+                            </span>
+                          </div>
+                          <a
+                            href={item.project_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs px-2.5 py-1 rounded-lg transition-all hover:opacity-80 cursor-pointer"
+                            style={{ backgroundColor: '#BFC897', color: '#3C3F20' }}
+                          >
+                            View
+                          </a>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs opacity-50" style={{ color: '#3C3F20' }}>
-                    No tasks yet
-                  </p>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Posted tasks */}
-              <div
-                className="rounded-2xl p-6 shadow-sm"
-                style={{ backgroundColor: '#E8E3C8' }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 style={{ color: '#3C3F20' }}>Posted Tasks</h3>
-                  <button
-                    onClick={() => navigate('/marketplace')}
-                    className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl transition-all hover:opacity-85 cursor-pointer"
-                    style={{ backgroundColor: '#BFC897', color: '#3C3F20' }}
-                  >
-                    All Tasks <ArrowRight size={12} />
-                  </button>
+                    </div>
+                  ))}
                 </div>
-                {userTasks.length > 0 ? (
-                  <div className="space-y-2">
-                    {userTasks.map((task) => (
-                      <div
-                        key={task.id}
-                        onClick={() => navigate(`/tasks/${task.id}`)}
-                        className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:border-[#BFC897] border-2 border-transparent transition-all"
-                        style={{ backgroundColor: '#FDF9EB' }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm truncate" style={{ color: '#3C3F20' }}>
-                            {task.title}
-                          </p>
-                          <p className="text-xs opacity-40" style={{ color: '#3C3F20' }}>
-                            {task.status || 'Open'}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs opacity-50" style={{ color: '#3C3F20' }}>
-                    No tasks posted yet
-                  </p>
-                )}
-              </div>
-            </>
+              )}
+            </div>
           )}
         </div>
       </div>
