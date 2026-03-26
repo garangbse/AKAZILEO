@@ -18,7 +18,7 @@ app = Flask(__name__)
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:akazileo@localhost:5432/akazileo')
 FLASK_ENV = os.getenv('FLASK_ENV', 'development')
 PORT = int(os.getenv('PORT', 5001))
-SECRET_KEY = os.getenv('SECRET_KEY', 'OiJIUzI1NiIsInR5cCI6IkpXVCJ9')
+SECRET_KEY = os.getenv('SECRET_KEY', '52efb2a1ea121f5d94f56c81655af158128c883f97e0110cdeea181a5f2af4dc')
 CORS_ORIGINS_STR = os.getenv('CORS_ORIGINS', 'http://localhost:5174,http://localhost:5175,http://127.0.0.1:5174,http://127.0.0.1:5175')
 
 # Parse CORS origins from comma-separated string
