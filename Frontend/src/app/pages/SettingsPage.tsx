@@ -4,7 +4,6 @@ import {
   Bell,
   Lock,
   CreditCard,
-  Users,
   Shield,
   Trash2,
   Moon,
@@ -13,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { getNotifications, markNotificationRead } from '../../services/task';
-import { deleteUserAccount } from '../../services/api';
+import { deleteUserAccount, changePassword } from '../../services/api';
 
 type SettingGroup = {
   label: string;
@@ -56,9 +55,9 @@ const SETTING_GROUPS: SettingGroup[] = [
         description: 'Light or dark mode, font size preferences',
       },
       {
-        icon: <Users size={16} />,
-        title: 'Privacy',
-        description: 'Control who can see your profile and activity',
+        icon: <Lock size={16} />,
+        title: 'Change Password',
+        description: 'Update your login password',
       },
     ],
   },
@@ -100,6 +99,12 @@ export function SettingsPage() {
   const [notificationError, setNotificationError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   useEffect(() => {
     if (activeItem === 'Notifications') {
@@ -182,6 +187,67 @@ export function SettingsPage() {
       setDeleteConfirm(false);
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    setPasswordSuccess(false);
+
+    // Validation
+    if (!currentPassword.trim()) {
+      setPasswordError('Current password is required');
+      return;
+    }
+    if (!newPassword.trim()) {
+      setPasswordError('New password is required');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+    if (currentPassword === newPassword) {
+      setPasswordError('New password must be different from current password');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token || !currentUser?.id) {
+      setPasswordError('Please log in to change password');
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      const response = await changePassword(
+        currentUser.id,
+        currentPassword,
+        newPassword,
+        token
+      );
+      if (response.status === 'success') {
+        setPasswordSuccess(true);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        // Reset success message after 3 seconds
+        setTimeout(() => {
+          setPasswordSuccess(false);
+          setActiveItem(null);
+        }, 3000);
+      } else {
+        setPasswordError(response.message || 'Failed to change password');
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      setPasswordError('Error changing password. Please try again.');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -346,6 +412,154 @@ export function SettingsPage() {
                         style={{ backgroundColor: '#3C3F20' }}
                       >
                         Close
+                      </button>
+                    </div>
+                  </div>
+                ) : activeItem === 'Delete Account' ? (
+                  <>
+                    {!deleteConfirm ? (
+                      <>
+                        <p className="text-sm" style={{ color: '#3C3F20' }}>
+                          Are you sure you want to delete your account? This action cannot be undone. All your data including tasks, submissions, portfolio items, and posts will be permanently deleted.
+                        </p>
+                        <div className="flex gap-3 mt-6">
+                          <button
+                            onClick={() => setDeleteConfirm(true)}
+                            className="flex-1 px-4 py-2 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer"
+                            style={{ backgroundColor: '#ef4444' }}
+                          >
+                            Yes, Delete My Account
+                          </button>
+                          <button
+                            onClick={() => setActiveItem(null)}
+                            className="flex-1 px-4 py-2 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer"
+                            style={{ backgroundColor: '#3C3F20' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium" style={{ color: '#ef4444' }}>
+                          Type "DELETE" to confirm account deletion:
+                        </p>
+                        <div className="mt-4 flex gap-3">
+                          <button
+                            onClick={handleDeleteAccount}
+                            disabled={deleteLoading}
+                            className="flex-1 px-4 py-2 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{ backgroundColor: '#ef4444' }}
+                          >
+                            {deleteLoading ? 'Deleting...' : 'Permanently Delete Account'}
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirm(false)}
+                            disabled={deleteLoading}
+                            className="flex-1 px-4 py-2 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{ backgroundColor: '#3C3F20' }}
+                          >
+                            Back
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : activeItem === 'Change Password' ? (
+                  <div>
+                    {passwordSuccess && (
+                      <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: '#ECFDF5', borderLeft: '4px solid #10B981' }}>
+                        <p className="text-sm font-medium" style={{ color: '#065F46' }}>
+                          ✓ Password changed successfully!
+                        </p>
+                      </div>
+                    )}
+                    {passwordError && (
+                      <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: '#FEE2E2', borderLeft: '4px solid #EF4444' }}>
+                        <p className="text-sm" style={{ color: '#991B1B' }}>
+                          {passwordError}
+                        </p>
+                      </div>
+                    )}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: '#3C3F20' }}>
+                          Current Password
+                        </label>
+                        <input
+                          type="password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          placeholder="Enter your current password"
+                          className="w-full px-4 py-2.5 rounded-xl border outline-none text-sm transition-colors"
+                          style={{
+                            borderColor: '#D0CBAF',
+                            backgroundColor: '#FFFFFF',
+                            color: '#3C3F20',
+                          }}
+                          disabled={passwordLoading}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: '#3C3F20' }}>
+                          New Password
+                        </label>
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="Enter your new password (min 6 characters)"
+                          className="w-full px-4 py-2.5 rounded-xl border outline-none text-sm transition-colors"
+                          style={{
+                            borderColor: '#D0CBAF',
+                            backgroundColor: '#FFFFFF',
+                            color: '#3C3F20',
+                          }}
+                          disabled={passwordLoading}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: '#3C3F20' }}>
+                          Confirm Password
+                        </label>
+                        <input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="Re-enter your new password"
+                          className="w-full px-4 py-2.5 rounded-xl border outline-none text-sm transition-colors"
+                          style={{
+                            borderColor: '#D0CBAF',
+                            backgroundColor: '#FFFFFF',
+                            color: '#3C3F20',
+                          }}
+                          disabled={passwordLoading}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-3 mt-6">
+                      <button
+                        onClick={handleChangePassword}
+                        disabled={passwordLoading}
+                        className="flex-1 px-4 py-2.5 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{ backgroundColor: '#3C3F20' }}
+                      >
+                        {passwordLoading ? 'Changing...' : 'Change Password'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveItem(null);
+                          setCurrentPassword('');
+                          setNewPassword('');
+                          setConfirmPassword('');
+                          setPasswordError(null);
+                          setPasswordSuccess(false);
+                        }}
+                        disabled={passwordLoading}
+                        className="flex-1 px-4 py-2.5 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{ backgroundColor: '#D0CBAF', color: '#3C3F20' }}
+                      >
+                        Cancel
                       </button>
                     </div>
                   </div>

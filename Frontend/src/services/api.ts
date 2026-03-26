@@ -57,4 +57,17 @@ export const deleteUserAccount = async (userId: number, token: string) => {
   return api(`/users/${userId}`, 'DELETE', undefined, token);
 };
 
+// Change password
+export const changePassword = async (
+  userId: number,
+  currentPassword: string,
+  newPassword: string,
+  token: string
+) => {
+  return api(`/users/${userId}/change-password`, 'PATCH', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  }, token);
+};
+
 

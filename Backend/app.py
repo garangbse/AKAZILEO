@@ -159,6 +159,36 @@ def update_user(current_user, user_id):
     session.close()
     return jsonify({"status": "success", "data": "Profile updated"})
 
+@app.route("/users/<int:user_id>/change-password", methods=["PATCH"])
+@token_required
+def change_password(current_user, user_id):
+    if current_user.id != user_id:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+    
+    data = request.json
+    
+    if not data.get("current_password") or not data.get("new_password"):
+        return jsonify({"status": "error", "message": "Current password and new password are required"}), 400
+    
+    session = Session()
+    user = session.query(User).filter_by(id=user_id).first()
+    
+    if not user:
+        session.close()
+        return jsonify({"status": "error", "message": "User not found"}), 404
+    
+    # Verify current password
+    if not check_password_hash(user.password_hash, data["current_password"]):
+        session.close()
+        return jsonify({"status": "error", "message": "Current password is incorrect"}), 401
+    
+    # Update password
+    user.password_hash = generate_password_hash(data["new_password"])
+    session.commit()
+    session.close()
+    
+    return jsonify({"status": "success", "message": "Password changed successfully"})
+
 @app.route("/users/<int:user_id>", methods=["DELETE"])
 @token_required
 def delete_user(current_user, user_id):
