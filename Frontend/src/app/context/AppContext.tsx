@@ -50,6 +50,7 @@ interface AppContextType {
   setRole: (role: Role) => void;
 
   isAuthenticated: boolean;
+  isSessionRestoring: boolean;
   userProfile: UserProfile;
   currentUser: { id?: number; username?: string; email?: string; bio?: string; profile_picture?: string } | null;
 
@@ -74,6 +75,7 @@ const AppContext = createContext<AppContextType>({
   setRole: () => {},
 
   isAuthenticated: false,
+  isSessionRestoring: true,
   userProfile: { name: '', email: '' },
   currentUser: null,
 
@@ -98,6 +100,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [roles, setRoles] = useState<Role[]>([]);           // ✅ starts empty, filled from API
   const [modal, setModal] = useState<ModalConfig>({ type: null });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isSessionRestoring, setIsSessionRestoring] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile>({ name: '', email: '' });
   const [currentUser, setCurrentUser] = useState<{ id?: number; username?: string; email?: string; bio?: string; profile_picture?: string } | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -109,6 +112,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       if (!token) {
         console.log('[SESSION] No token found in localStorage');
+        setIsSessionRestoring(false);
         return;
       }
       
@@ -135,6 +139,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.error('[SESSION] Failed to restore session:', error);
         // Clear invalid token
         localStorage.removeItem('token');
+      } finally {
+        setIsSessionRestoring(false);
       }
     };
     
@@ -209,6 +215,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setRole,
 
         isAuthenticated,
+        isSessionRestoring,
         userProfile,
         currentUser,
 

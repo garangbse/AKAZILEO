@@ -1,8 +1,12 @@
 from sqlalchemy import Column, Integer, String, Text, Float, DateTime, Enum, ForeignKey, Boolean, create_engine
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
+import os
 
-db_url = "sqlite:///database.db"
+# PostgreSQL connection string
+# Local development: postgresql://postgres:password@localhost:5432/akazileo
+# Production: Set DATABASE_URL environment variable (e.g., from Render.com)
+db_url = os.getenv('DATABASE_URL', 'postgresql://postgres:akazileo@localhost:5432/akazileo')
 
 #Create a connection manager between the database and pythoncode
 # cable / tube to connect teller to vault
@@ -18,9 +22,9 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(50), nullable=False, index=True)
     email = Column(String(50), nullable=False, unique=True)
-    password_hash = Column(String(100), nullable=False)
+    password_hash = Column(String(255), nullable=False)
     bio = Column(Text)
-    profile_picture = Column(String(255))
+    profile_picture = Column(Text)
     website = Column(String(255))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow ,onupdate=datetime.utcnow)
@@ -85,7 +89,7 @@ class TaskSubmission(Base):
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False, index=True)#@Find all submissions for a task
     worker_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)#@Find all submissions by a user
     submission_text = Column(Text, nullable=True)
-    submission_file = Column(String(255), nullable=False)
+    submission_file = Column(Text, nullable=False)
     status = Column(Enum("pending", "approved", "rejected", name="submission_status"), nullable=False, default="pending")
     submitted_at = Column(DateTime, default=datetime.utcnow)
 
@@ -99,7 +103,7 @@ class Portfolio(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     project_link = Column(String(255), nullable=True)
-    media_file = Column(String(255), nullable=True)
+    media_file = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="portfolio_items")
@@ -109,7 +113,7 @@ class Post(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)#@find all posts by a user
     content = Column(Text, nullable=False)
-    media_file = Column(String(255), nullable=True)
+    media_file = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

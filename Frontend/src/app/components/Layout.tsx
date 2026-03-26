@@ -25,7 +25,7 @@ const navItems = [
 
 
 export function Layout() {
-  const { role, setRole, roles, isAuthenticated, currentUser } = useAppContext();
+  const { role, setRole, roles, isAuthenticated, isSessionRestoring, currentUser } = useAppContext();
   console.log("GUARD AUTH",isAuthenticated)
   const navigate = useNavigate();
   const [profilePicture, setProfilePicture] = useState<string | null>(currentUser?.profile_picture || null);
@@ -95,6 +95,17 @@ export function Layout() {
     setShowResults(false);
     navigate(`/profile/${userId}`);
   };
+
+  if (isSessionRestoring) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center" style={{ backgroundColor: '#FDF9EB' }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border" style={{ borderColor: '#3C3F20' }} />
+          <p className="mt-4" style={{ color: '#3C3F20' }}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -168,7 +179,7 @@ export function Layout() {
             style={{ borderColor: '#BFC897' }}
           />
           <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-medium truncate">{profile.name}</p>
+            <p className="text-white text-sm font-medium truncate">{currentUser?.username || profile.name}</p>
             <p className="text-white/40 text-xs capitalize">{role}</p>
           </div>
         </div>
@@ -252,7 +263,7 @@ export function Layout() {
               style={{ borderColor: '#BFC897' }}
             />
             <span className="text-sm hidden sm:block" style={{ color: '#3C3F20' }}>
-              {profile.name}
+              {currentUser?.username || profile.name}
             </span>
             <ChevronDown size={13} style={{ color: '#3C3F20' }} className="opacity-50" />
           </div>

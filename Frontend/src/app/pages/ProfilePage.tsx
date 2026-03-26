@@ -24,6 +24,7 @@ export function ProfilePage() {
   const targetUserId = userId ? parseInt(userId) : currentUser?.id;
 
   const [editing, setEditing] = useState(false);
+  const [username, setUsername] = useState(currentUser?.username || '');
   const [bio, setBio] = useState(currentUser?.bio || '');
   const [profilePicture, setProfilePicture] = useState<string | null>(currentUser?.profile_picture || null);
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
@@ -50,6 +51,7 @@ export function ProfilePage() {
             if (fetchedProfilePicture) {
               setProfilePicture(fetchedProfilePicture);
             }
+            if (username) setUsername(username);
           } else {
             // View another user's profile (read-only)
             setViewedUserData({
@@ -128,6 +130,7 @@ export function ProfilePage() {
         `/users/${currentUser.id}`,
         'PUT',
         {
+          username: username,
           bio: bio,
           profile_picture: pictureBase64 || profilePicture,
         },
@@ -135,8 +138,9 @@ export function ProfilePage() {
       );
 
       if (res.status === 'success') {
-        // Update context with new bio and profile picture so it persists
+        // Update context with new username, bio and profile picture so it persists
         updateCurrentUser({
+          username: username,
           bio: bio,
           profile_picture: (pictureBase64 || profilePicture) || undefined,
         });
@@ -217,6 +221,19 @@ export function ProfilePage() {
             <div className="space-y-3 text-left">
               <div>
                 <label className="text-xs opacity-60" style={{ color: '#3C3F20' }}>
+                  Username
+                </label>
+                <input
+                  type="text"
+                  placeholder="Your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full rounded-xl px-3 py-2 text-sm outline-none mt-2"
+                  style={{ backgroundColor: '#FDF9EB', color: '#3C3F20' }}
+                />
+              </div>
+              <div>
+                <label className="text-xs opacity-60" style={{ color: '#3C3F20' }}>
                   Profile Picture
                 </label>
                 <label className="block w-full rounded-xl px-4 py-2 text-sm border-2 border-dashed text-center cursor-pointer hover:bg-opacity-50 transition-all mt-2"
@@ -231,14 +248,19 @@ export function ProfilePage() {
                   />
                 </label>
               </div>
-              <textarea
-                rows={3}
-                placeholder="Add a bio..."
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none"
-                style={{ backgroundColor: '#FDF9EB', color: '#3C3F20' }}
-              />
+              <div>
+                <label className="text-xs opacity-60" style={{ color: '#3C3F20' }}>
+                  Bio
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Add a bio..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none mt-2"
+                  style={{ backgroundColor: '#FDF9EB', color: '#3C3F20' }}
+                />
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={handleSaveProfile}
@@ -250,6 +272,7 @@ export function ProfilePage() {
                 </button>
                 <button
                   onClick={() => {
+                    setUsername(currentUser?.username || '');
                     setBio(currentUser?.bio || '');
                     setProfilePicture(currentUser?.profile_picture || null);
                     setProfilePictureFile(null);

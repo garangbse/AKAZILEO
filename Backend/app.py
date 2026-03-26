@@ -5,13 +5,20 @@ from sqlalchemy.orm import sessionmaker , joinedload
 from models import engine, User, Task, TaskSubmission, Portfolio, Post, Comment, Like, Role, UserRole, TaskApplication, Notification
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
+import os
 from functools import wraps
 from datetime import datetime, timedelta
 
+
+
 # --- CONFIGURATION ---
 app = Flask(__name__)
+
+# Set default DATABASE_URL for local development if not set
+os.environ.setdefault('DATABASE_URL', 'postgresql://postgres:akazileo@localhost:5432/akazileo')
+
 CORS(app,
-     origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+     origins=[ "http://localhost:5174", "http://localhost:5175", "http://127.0.0.1:5174","http://127.0.0.1:5175"],
      methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"],
      supports_credentials=True,
@@ -1024,4 +1031,4 @@ def like_post(current_user, post_id):
 
 # --- RUN SERVER ---
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5001)
