@@ -5,7 +5,7 @@
 
 set -e
 
-echo "🚀 Starting AKAZILEO..."
+echo " Starting AKAZILEO..."
 echo "================================"
 
 # Colors for output
@@ -15,7 +15,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Check if PostgreSQL is running
-echo -e "${BLUE}📦 Checking PostgreSQL...${NC}"
+echo -e "${BLUE} Checking PostgreSQL...${NC}"
 if sudo systemctl is-active --quiet postgresql; then
     echo -e "${GREEN}✓ PostgreSQL is already running${NC}"
 else
@@ -26,7 +26,7 @@ fi
 
 # Start Backend
 echo ""
-echo -e "${BLUE}⚙️  Starting Flask Backend...${NC}"
+echo -e "${BLUE}  Starting Flask Backend...${NC}"
 cd "$(dirname "$0")/Backend"
 source venv/bin/activate
 python3 app.py &
@@ -39,7 +39,7 @@ sleep 2
 
 # Start Frontend
 echo ""
-echo -e "${BLUE}🎨 Starting React Frontend...${NC}"
+echo -e "${BLUE} Starting React Frontend...${NC}"
 cd "$(dirname "$0")/Frontend"
 npm run dev &
 FRONTEND_PID=$!
@@ -48,15 +48,15 @@ echo "   Running on: http://localhost:5175"
 
 echo ""
 echo "================================"
-echo -e "${GREEN}✅ AKAZILEO is running!${NC}"
+echo -e "${GREEN} AKAZILEO is running!${NC}"
 echo "================================"
 echo ""
-echo -e "${YELLOW}📍 Access the application:${NC}"
+echo -e "${YELLOW} Access the application:${NC}"
 echo "   Frontend: http://localhost:5175"
 echo "   Backend:  http://127.0.0.1:5001"
 echo "   Database: localhost:5432"
 echo ""
-echo -e "${YELLOW}📝 To stop the application:${NC}"
+echo -e "${YELLOW} To stop the application:${NC}"
 echo "   Press Ctrl+C to stop both services"
 echo ""
 
