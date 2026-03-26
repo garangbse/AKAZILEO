@@ -19,7 +19,19 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:akazileo@localho
 FLASK_ENV = os.getenv('FLASK_ENV', 'development')
 PORT = int(os.getenv('PORT', 5001))
 SECRET_KEY = os.getenv('SECRET_KEY', '52efb2a1ea121f5d94f56c81655af158128c883f97e0110cdeea181a5f2af4dc')
-CORS_ORIGINS_STR = os.getenv('CORS_ORIGINS', 'http://localhost:5174,http://localhost:5175,http://127.0.0.1:5174,http://127.0.0.1:5175')
+
+# CORS Configuration - Environment-specific
+if FLASK_ENV == 'production':
+    # Production: CORS_ORIGINS must be explicitly set
+    CORS_ORIGINS_STR = os.getenv('CORS_ORIGINS')
+    if not CORS_ORIGINS_STR:
+        raise ValueError(
+            "CORS_ORIGINS environment variable must be set in production. "
+            "Example: CORS_ORIGINS=https://yourfrontend.vercel.app"
+        )
+else:
+    # Development: Allow localhost by default
+    CORS_ORIGINS_STR = os.getenv('CORS_ORIGINS', 'http://localhost:5174,http://localhost:5175,http://127.0.0.1:5174,http://127.0.0.1:5175')
 
 # Parse CORS origins from comma-separated string
 CORS_ORIGINS = [origin.strip() for origin in CORS_ORIGINS_STR.split(',')]
