@@ -3,11 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Bell,
   Lock,
-  CreditCard,
-  Shield,
   Trash2,
-  Moon,
-  Globe,
   ChevronRight,
 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
@@ -34,47 +30,15 @@ const SETTING_GROUPS: SettingGroup[] = [
         description: 'Manage email and in-app notification preferences',
         badge: '3 new',
       },
-      {
-        icon: <Lock size={16} />,
-        title: 'Password & Security',
-        description: 'Update password, two-factor authentication',
-      },
-      {
-        icon: <Globe size={16} />,
-        title: 'Language & Region',
-        description: 'Set your preferred language and timezone',
-      },
     ],
   },
   {
     label: 'Preferences',
     items: [
       {
-        icon: <Moon size={16} />,
-        title: 'Appearance',
-        description: 'Light or dark mode, font size preferences',
-      },
-      {
         icon: <Lock size={16} />,
         title: 'Change Password',
         description: 'Update your login password',
-      },
-    ],
-  },
-  {
-    label: 'Billing',
-    items: [
-      {
-        icon: <CreditCard size={16} />,
-        title: 'Payment Methods',
-        description: 'Add or manage your payment options',
-        badge: 'Coming soon',
-      },
-      {
-        icon: <Shield size={16} />,
-        title: 'Subscription',
-        description: 'Manage your plan and usage limits',
-        badge: 'Coming soon',
       },
     ],
   },
@@ -366,7 +330,13 @@ export function SettingsPage() {
                         No notifications yet
                       </p>
                     ) : (
-                      <div className="space-y-3">
+                      <div
+                        className="space-y-3 pr-2"
+                        style={{
+                          maxHeight: '400px',
+                          overflowY: 'auto',
+                        }}
+                      >
                         {notifications.map((notification) => (
                           <div
                             key={notification.id}

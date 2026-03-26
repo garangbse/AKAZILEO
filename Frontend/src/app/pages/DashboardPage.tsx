@@ -94,6 +94,8 @@ export function DashboardPage() {
   const [profilePicture, setProfilePicture] = useState<string | null>(currentUser?.profile_picture || null);
   const [tasksCompleted, setTasksCompleted] = useState(0);
   const [portfolioCount, setPortfolioCount] = useState(0);
+  const [tasksPosted, setTasksPosted] = useState(0);
+  const [openTasksCount, setOpenTasksCount] = useState(0);
 
   // Listen to context profilePicture changes and update local state
   useEffect(() => {
@@ -169,6 +171,12 @@ export function DashboardPage() {
               worker: null,
             }));
             setPostedTasks(transformedTasks.slice(0, 4));
+            
+            // Set employer stats
+            setTasksPosted(response.data.length);
+            const openCount = response.data.filter((task: any) => task.status === 'open').length;
+            setOpenTasksCount(openCount);
+            console.log('[DASHBOARD] Employer tasks posted:', response.data.length, 'Open:', openCount);
           }
         }
       } catch (error) {
@@ -301,7 +309,7 @@ export function DashboardPage() {
                     <div className="flex items-center justify-center gap-1 mb-0.5">
                       <TrendingUp size={14} style={{ color: '#BFC897' }} />
                       <span className="text-xl" style={{ color: '#3C3F20' }}>
-                        {EMPLOYER_PROFILE.tasksPosted}
+                        {tasksPosted}
                       </span>
                     </div>
                     <p className="text-xs opacity-50" style={{ color: '#3C3F20' }}>
@@ -312,11 +320,11 @@ export function DashboardPage() {
                     <div className="flex items-center justify-center gap-1 mb-0.5">
                       <Clock size={14} style={{ color: '#BFC897' }} />
                       <span className="text-xl" style={{ color: '#3C3F20' }}>
-                        {EMPLOYER_PROFILE.activeTasksCount}
+                        {openTasksCount}
                       </span>
                     </div>
                     <p className="text-xs opacity-50" style={{ color: '#3C3F20' }}>
-                      Active
+                      Open
                     </p>
                   </div>
                 </>
