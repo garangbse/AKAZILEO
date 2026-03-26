@@ -661,6 +661,18 @@ def update_submission_status(current_user, task_id, submission_id):
     data = request.json
     if data.get("status") in ["approved", "rejected"]:
         submission.status = data["status"]
+        
+        # Create notification for the worker
+        status_text = "approved" if data["status"] == "approved" else "rejected"
+        notification = Notification(
+            user_id=submission.worker_id,
+            type=f"submission_{data['status']}",
+            title=f"Submission {status_text.capitalize()}",
+            message=f"Your submission for '{task.title}' has been {status_text}.",
+            related_id=submission.id
+        )
+        session.add(notification)
+    
     session.commit()
     session.close()
     return jsonify({"status": "success", "data": "Submission updated"})

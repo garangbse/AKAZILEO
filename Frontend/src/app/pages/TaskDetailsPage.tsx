@@ -25,6 +25,7 @@ export function TaskDetailsPage() {
   const [submissionFile, setSubmissionFile] = useState<File | null>(null);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
+  const [workerSubmission, setWorkerSubmission] = useState<any | null>(null);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [completeTaskLoading, setCompleteTaskLoading] = useState(false);
@@ -85,6 +86,23 @@ export function TaskDetailsPage() {
             );
             if (!hasAcceptedApplication) {
               setAccessDenied(true);
+            } else {
+              // Fetch the worker's submission for this task
+              setLoadingSubmissions(true);
+              try {
+                const submissionsRes = await getTaskSubmissions(Number(id), token);
+                if (submissionsRes.status === 'success' && submissionsRes.data) {
+                  // Find the submission by current worker
+                  const mySubmission = submissionsRes.data.find(
+                    (sub: any) => sub.worker_id === currentUser?.id
+                  );
+                  setWorkerSubmission(mySubmission || null);
+                }
+              } catch (err) {
+                console.error('Error fetching worker submission:', err);
+              } finally {
+                setLoadingSubmissions(false);
+              }
             }
           } else {
             setAccessDenied(true);
@@ -469,6 +487,83 @@ export function TaskDetailsPage() {
                 Submit Your Work
               </h2>
 
+              {workerSubmission && (
+                <div
+                  className="mb-6 p-4 rounded-xl border-2"
+                  style={{
+                    backgroundColor:
+                      workerSubmission.status === 'approved'
+                        ? '#ECFDF5'
+                        : workerSubmission.status === 'rejected'
+                        ? '#FEF2F2'
+                        : '#FFFBEB',
+                    borderColor:
+                      workerSubmission.status === 'approved'
+                        ? '#10B981'
+                        : workerSubmission.status === 'rejected'
+                        ? '#EF4444'
+                        : '#F59E0B',
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    {workerSubmission.status === 'approved' && (
+                      <CheckCircle
+                        size={20}
+                        style={{ color: '#10B981' }}
+                      />
+                    )}
+                    {workerSubmission.status === 'rejected' && (
+                      <XCircle
+                        size={20}
+                        style={{ color: '#EF4444' }}
+                      />
+                    )}
+                    {workerSubmission.status === 'pending' && (
+                      <Clock
+                        size={20}
+                        style={{ color: '#F59E0B' }}
+                      />
+                    )}
+                    <div>
+                      <p
+                        className="font-medium text-sm"
+                        style={{
+                          color:
+                            workerSubmission.status === 'approved'
+                              ? '#065F46'
+                              : workerSubmission.status === 'rejected'
+                              ? '#7F1D1D'
+                              : '#92400E',
+                        }}
+                      >
+                        {workerSubmission.status === 'approved'
+                          ? 'Submission Approved ✓'
+                          : workerSubmission.status === 'rejected'
+                          ? 'Submission Rejected'
+                          : 'Submission Pending'}
+                      </p>
+                      <p
+                        className="text-xs opacity-70 mt-1"
+                        style={{
+                          color:
+                            workerSubmission.status === 'approved'
+                              ? '#065F46'
+                              : workerSubmission.status === 'rejected'
+                              ? '#7F1D1D'
+                              : '#92400E',
+                        }}
+                      >
+                        {workerSubmission.status === 'approved'
+                          ? 'Great work! Your submission has been approved by the employer.'
+                          : workerSubmission.status === 'rejected'
+                          ? 'Your submission was not approved. Please review and resubmit if needed.'
+                          : 'Waiting for employer review...'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="mb-4">
                 <label
                   className="block text-sm mb-2 opacity-65"
@@ -481,7 +576,8 @@ export function TaskDetailsPage() {
                   placeholder="Describe your work, include links, or add notes for the employer..."
                   value={submissionNote}
                   onChange={(e) => setSubmissionNote(e.target.value)}
-                  className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
+                  disabled={workerSubmission?.status === 'approved'}
+                  className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ backgroundColor: '#FDF9EB', color: '#3C3F20' }}
                 />
               </div>
@@ -494,24 +590,32 @@ export function TaskDetailsPage() {
                   Attach File
                 </label>
                 <label
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 border-dashed cursor-pointer hover:border-[#BFC897] transition-colors"
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
+                    workerSubmission?.status === 'approved' ? 'opacity-50 cursor-not-allowed' : 'hover:border-[#BFC897]'
+                  }`}
                   style={{ borderColor: '#C5BDAA' }}
                 >
                   <Paperclip size={15} style={{ color: '#3C3F20' }} className="opacity-50" />
                   <span className="text-sm opacity-55" style={{ color: '#3C3F20' }}>
                     {fileName || 'Click to upload a file'}
                   </span>
-                  <input type="file" className="hidden" onChange={handleFileChange} />
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileChange}
+                    disabled={workerSubmission?.status === 'approved'}
+                  />
                 </label>
               </div>
 
               <button
                 onClick={handleSubmit}
-                className="w-full py-3 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer flex items-center justify-center gap-2"
+                disabled={workerSubmission?.status === 'approved'}
+                className="w-full py-3 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 style={{ backgroundColor: '#3C3F20' }}
               >
                 <Upload size={14} />
-                Submit Work
+                {workerSubmission?.status === 'approved' ? 'Work Already Approved' : 'Submit Work'}
               </button>
             </div>
           ) : (
