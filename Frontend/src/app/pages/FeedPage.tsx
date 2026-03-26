@@ -36,14 +36,20 @@ export function FeedPage() {
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(currentUser?.profile_picture || null);
+  const [posterProfilePictures, setPosterProfilePictures] = useState<Record<number, string>>({});
 
   // Listen to context profilePicture changes and update local state
   useEffect(() => {
-    if (currentUser?.profile_picture) {
+    if (currentUser?.profile_picture && currentUser?.id) {
       setProfilePicture(currentUser.profile_picture);
+      // Also update this user's profile picture in the feed if they appear as a poster
+      setPosterProfilePictures((prev) => ({
+        ...prev,
+        [currentUser.id!]: currentUser.profile_picture!,
+      }));
       console.log('[FEED] Profile picture updated from context');
     }
-  }, [currentUser?.profile_picture]);
+  }, [currentUser?.profile_picture, currentUser?.id]);
 
   // Fetch user profile picture from database on mount
   useEffect(() => {
@@ -78,6 +84,24 @@ export function FeedPage() {
       const response = await api('/posts', 'GET', undefined, token);
       if (response.status === 'success' && response.data) {
         setPosts(response.data);
+
+        // Fetch profile pictures for all unique posters
+        const uniquePosterIds = [...new Set(response.data.map((post: FeedPost) => post.user_id))] as number[];
+        const profilePicturesMap: Record<number, string> = {};
+
+        for (const userId of uniquePosterIds) {
+          try {
+            const userResponse = await api(`/users/${userId}`, 'GET', undefined, token);
+            if (userResponse.status === 'success' && userResponse.data?.profile_picture) {
+              profilePicturesMap[userId] = userResponse.data.profile_picture;
+              console.log(`[FEED] Fetched profile picture for user ${userId}`);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch profile picture for user ${userId}:`, error);
+          }
+        }
+
+        setPosterProfilePictures(profilePicturesMap);
       }
     } catch (error) {
       console.error('Failed to fetch posts:', error);
@@ -337,7 +361,13 @@ export function FeedPage() {
             <div className="flex items-center justify-between p-5 pb-3">
               <div className="flex items-center gap-3">
                 <img
-                  src={post.authorAvatar || 'https://via.placeholder.com/40'}
+                  src={
+                    posterProfilePictures[post.user_id]
+                      ? posterProfilePictures[post.user_id].startsWith('data:')
+                        ? posterProfilePictures[post.user_id]
+                        : `data:image/png;base64,${posterProfilePictures[post.user_id]}`
+                      : post.authorAvatar || 'https://via.placeholder.com/40'
+                  }
                   alt={post.author}
                   className="w-10 h-10 rounded-full object-cover border-2 flex-shrink-0"
                   style={{ borderColor: '#BFC897' }}
