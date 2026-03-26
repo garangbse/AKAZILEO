@@ -188,8 +188,7 @@ export function TaskMarketplacePage() {
           >
             <option value="All">All Statuses</option>
             <option value="open">open</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Completed">Completed</option>
+            <option value="completed">completed</option>
           </select>
           <ChevronDown
             size={13}
