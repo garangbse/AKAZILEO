@@ -14,16 +14,27 @@ from datetime import datetime, timedelta
 # --- CONFIGURATION ---
 app = Flask(__name__)
 
-# Set default DATABASE_URL for local development if not set
-os.environ.setdefault('DATABASE_URL', 'postgresql://postgres:akazileo@localhost:5432/akazileo')
+# Environment Variables for Deployment
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:akazileo@localhost:5432/akazileo')
+FLASK_ENV = os.getenv('FLASK_ENV', 'development')
+PORT = int(os.getenv('PORT', 5001))
+SECRET_KEY = os.getenv('SECRET_KEY', 'OiJIUzI1NiIsInR5cCI6IkpXVCJ9')
+CORS_ORIGINS_STR = os.getenv('CORS_ORIGINS', 'http://localhost:5174,http://localhost:5175,http://127.0.0.1:5174,http://127.0.0.1:5175')
 
+# Parse CORS origins from comma-separated string
+CORS_ORIGINS = [origin.strip() for origin in CORS_ORIGINS_STR.split(',')]
+
+# Set default DATABASE_URL for local development if not set
+os.environ.setdefault('DATABASE_URL', DATABASE_URL)
+
+# CORS Configuration
 CORS(app,
-     origins=[ "http://localhost:5174", "http://localhost:5175", "http://127.0.0.1:5174","http://127.0.0.1:5175"],
+     origins=CORS_ORIGINS,
      methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"],
      supports_credentials=True,
      max_age=3600)
-app.config['SECRET_KEY'] = 'OiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+app.config['SECRET_KEY'] = SECRET_KEY
 Session = sessionmaker(bind=engine)
 
 # --- HELPER FUNCTIONS ---
@@ -322,6 +333,7 @@ def get_tasks(current_user):
             "status": task.status,
             "due_date": task.due_date,
             "poster_id": task.poster_id,
+            "poster_name": task.poster.username if task.poster else "Unknown",
             "created_at": str(task.created_at)
         })
     session.close()
@@ -365,7 +377,7 @@ def create_task(current_user):
         description=data["description"],
         poster_id=current_user.id,
         payment=data.get("payment"),
-        due_date=due_date,  # ✅ pass converted datetime
+        due_date=due_date,
     )
     
     session.add(task)
@@ -499,6 +511,17 @@ def apply_to_task(current_user, task_id):
         )
 
         session.add(application)
+        session.commit()
+
+        # Create notification for the employer
+        notification = Notification(
+            user_id=task.poster_id,
+            type="application_received",
+            title="New Application",
+            message=f"{current_user.username} applied for '{task.title}'",
+            related_id=application.id
+        )
+        session.add(notification)
         session.commit()
 
         result = {
@@ -686,6 +709,11 @@ def submit_task(current_user, task_id):
     session = Session()
     data = request.json
     
+    task = session.query(Task).filter_by(id=task_id).first()
+    if not task:
+        session.close()
+        return jsonify({"status": "error", "message": "Task not found"}), 404
+    
     submission = TaskSubmission(
         task_id=task_id,
         worker_id=current_user.id,
@@ -694,6 +722,17 @@ def submit_task(current_user, task_id):
         status="pending"
     )
     session.add(submission)
+    session.commit()
+    
+    # Create notification for the employer
+    notification = Notification(
+        user_id=task.poster_id,
+        type="submission_received",
+        title="New Submission",
+        message=f"{current_user.username} submitted for '{task.title}'",
+        related_id=submission.id
+    )
+    session.add(notification)
     session.commit()
     session.close()
     return jsonify({"status": "success", "data": "Submission created"})
@@ -1031,4 +1070,5 @@ def like_post(current_user, post_id):
 
 # --- RUN SERVER ---
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    debug = FLASK_ENV == 'development'
+    app.run(debug=debug, port=PORT, host='0.0.0.0')

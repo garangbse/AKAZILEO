@@ -4,6 +4,7 @@ import {
   Bell,
   Lock,
   Trash2,
+  LogOut,
   ChevronRight,
 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
@@ -49,6 +50,16 @@ const SETTING_GROUPS: SettingGroup[] = [
         icon: <Trash2 size={16} />,
         title: 'Delete Account',
         description: 'Permanently delete your account and all data',
+      },
+    ],
+  },
+  {
+    label: 'Session',
+    items: [
+      {
+        icon: <LogOut size={16} />,
+        title: 'Logout',
+        description: 'End your current session',
       },
     ],
   },
@@ -213,6 +224,18 @@ export function SettingsPage() {
     } finally {
       setPasswordLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    // Clear authentication data
+    localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
+    
+    // Logout from context
+    logout();
+    
+    // Navigate to login page
+    navigate('/login', { replace: true });
   };
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
@@ -582,6 +605,28 @@ export function SettingsPage() {
                         </div>
                       </>
                     )}
+                  </>
+                ) : activeItem === 'Logout' ? (
+                  <>
+                    <p className="text-sm" style={{ color: '#3C3F20' }}>
+                      Are you sure you want to logout? You'll need to login again to access your account.
+                    </p>
+                    <div className="flex gap-3 mt-6">
+                      <button
+                        onClick={handleLogout}
+                        className="flex-1 px-4 py-2 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer"
+                        style={{ backgroundColor: '#ef4444' }}
+                      >
+                        Yes, Logout
+                      </button>
+                      <button
+                        onClick={() => setActiveItem(null)}
+                        className="flex-1 px-4 py-2 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer"
+                        style={{ backgroundColor: '#3C3F20' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <>

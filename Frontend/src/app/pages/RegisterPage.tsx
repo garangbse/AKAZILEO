@@ -149,7 +149,7 @@ export function RegisterPage() {
               <label className="block text-sm mb-1.5 opacity-65" style={{ color: '#3C3F20' }}>Full name</label>
               <input
                 type="text"
-                placeholder="Sarah Mitchell"
+                placeholder="your name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none border-2 border-transparent transition-all focus:border-[#BFC897]"

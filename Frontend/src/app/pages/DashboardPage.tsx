@@ -53,7 +53,13 @@ function TaskCard({ task, onClick }: { task: (typeof TASKS)[0]; onClick: () => v
 
       <div className="flex items-center gap-1.5">
         <img
-          src={task.posterAvatar}
+          src={
+            task.posterAvatar
+              ? task.posterAvatar.startsWith('data:') || task.posterAvatar.startsWith('http')
+                ? task.posterAvatar
+                : `data:image/png;base64,${task.posterAvatar}`
+              : 'https://via.placeholder.com/40'
+          }
           alt={task.poster}
           className="w-5 h-5 rounded-full object-cover"
         />
@@ -149,7 +155,7 @@ export function DashboardPage() {
               status: task.status === 'open' ? 'Open' : task.status === 'assigned' ? 'In Progress' : 'Completed',
               completion: task.status === 'completed' ? 100 : task.status === 'assigned' ? 50 : 0,
               poster: currentUser?.username || 'You',
-              posterAvatar: 'https://via.placeholder.com/40',
+              posterAvatar: currentUser?.profile_picture || 'https://via.placeholder.com/40',
               payment: task.payment,
               worker: null,
             }));
@@ -216,6 +222,19 @@ export function DashboardPage() {
 
     fetchPortfolioItems();
   }, [isWorker, currentUser?.id]);
+
+  // Update posted tasks avatar when profile picture changes
+  useEffect(() => {
+    if (isWorker || postedTasks.length === 0) return;
+    
+    setPostedTasks((prevTasks) =>
+      prevTasks.map((task) => ({
+        ...task,
+        posterAvatar: profilePicture || 'https://via.placeholder.com/40',
+      }))
+    );
+    console.log('[DASHBOARD] Posted tasks avatars updated with profile picture');
+  }, [profilePicture, isWorker]);
 
   const recentTasks = isWorker ? acceptedTasks : postedTasks;
 

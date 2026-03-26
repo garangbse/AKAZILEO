@@ -193,12 +193,7 @@ const LoginPage = () => {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm opacity-65" style={{ color: '#3C3F20' }}>Password</label>
-                <button type="button" className="text-xs opacity-45 hover:opacity-70 transition-opacity cursor-pointer" style={{ color: '#3C3F20' }}>
-                  Forgot password?
-                </button>
-              </div>
+              <label className="text-sm mb-1.5 opacity-65 block" style={{ color: '#3C3F20' }}>Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}

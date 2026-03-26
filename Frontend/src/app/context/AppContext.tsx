@@ -13,6 +13,7 @@ export type Task = {
   payment: number;
   due_date: string | null;
   poster_id?: number;
+  poster_name?: string;
 };
 
 export interface ModalConfig {
@@ -41,7 +42,7 @@ export interface UserProfile {
   email: string;
 }
 
-// ✅ Updated login signature to match implementation
+
 // Tells TypeScript: Any component using this context can access anything, update them, and add new ones.”
 
 interface AppContextType {
@@ -97,7 +98,7 @@ const AppContext = createContext<AppContextType>({
 export function AppProvider({ children }: { children: React.ReactNode }) {
   /*Creates a global list stored in context.*/
   const [role, setRole] = useState<Role>('worker');
-  const [roles, setRoles] = useState<Role[]>([]);           // ✅ starts empty, filled from API
+  const [roles, setRoles] = useState<Role[]>([]);
   const [modal, setModal] = useState<ModalConfig>({ type: null });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSessionRestoring, setIsSessionRestoring] = useState(true);
@@ -168,7 +169,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }, [isAuthenticated]);
  
 
-  // ✅ Signature now matches the interface
   const login = (roles: Role[], selectedRole: Role, id: number, name: string, email: string) => {
   setRoles(roles);
   setRole(selectedRole);
@@ -181,7 +181,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsAuthenticated(false);
     setUserProfile({ name: '', email: '' });
     setCurrentUser(null);
-    setRoles([]);  // ✅ clear roles on logout
+    setRoles([]);
   };
 
   const updateUserProfile = (updates: Partial<UserProfile>) => {

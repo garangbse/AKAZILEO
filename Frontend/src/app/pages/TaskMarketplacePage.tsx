@@ -11,18 +11,8 @@ import {
   Calendar,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAppContext } from '../context/AppContext';
+import { useAppContext, Task } from '../context/AppContext';
 import  { applyToTask, getUserApplications, getTasks } from '../../services/task';
-
-type Task = {
-  id: number;
-  title: string;
-  description: string;
-  payment: number;
-  status: string;
-  due_date?: string | null;
-  poster_id?: number;
-};
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   Design: <Palette size={13} />,
@@ -296,6 +286,10 @@ export function TaskMarketplacePage() {
             >
               {task.description}
             </p>
+
+            <div className="text-xs opacity-65 mb-2.5" style={{ color: '#3C3F20' }}>
+              Posted by: <span className="font-medium">{task.poster_name || 'Unknown'}</span>
+            </div>
 
             <div className="text-sm font-medium mb-3">
               Payment: ${task.payment}

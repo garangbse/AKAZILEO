@@ -9,7 +9,7 @@ import os
 db_url = os.getenv('DATABASE_URL', 'postgresql://postgres:akazileo@localhost:5432/akazileo')
 
 #Create a connection manager between the database and pythoncode
-# cable / tube to connect teller to vault
+
 engine = create_engine(db_url, echo=True)#echo -prints SQL statements for debugging.
 
 #Create models
@@ -57,7 +57,7 @@ class UserRole(Base):
 class Task(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True)
-    title = Column(String(255), nullable=False, index=True) #@To search for tasks faster
+    title = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=False)
     poster_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)#@used in joins apparently but we'll see
     payment = Column(Float, nullable=False)
