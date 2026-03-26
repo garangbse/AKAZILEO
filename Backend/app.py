@@ -697,22 +697,36 @@ def update_task(current_user, task_id):
 def delete_task(current_user, task_id):
     session = Session()
 
-    task = session.query(Task).filter_by(id=task_id).first()
+    try:
+        task = session.query(Task).filter_by(id=task_id).first()
 
-    if not task:
+        if not task:
+            session.close()
+            return jsonify({"status": "error", "message": "Task not found"}), 404
+
+        # Only the employer (poster) can delete the task
+        if task.poster_id != current_user.id:
+            session.close()
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
+        # Delete related task applications
+        session.query(TaskApplication).filter_by(task_id=task_id).delete()
+
+        # Delete related task submissions
+        session.query(TaskSubmission).filter_by(task_id=task_id).delete()
+
+        # Delete the task
+        session.delete(task)
+        session.commit()
         session.close()
-        return jsonify({"status": "error", "message": "Task not found"}), 404
 
-    # Only the employer (poster) can delete the task
-    if task.poster_id != current_user.id:
+        return jsonify({"status": "success", "data": "Task deleted"})
+
+    except Exception as e:
+        session.rollback()
         session.close()
-        return jsonify({"status": "error", "message": "Unauthorized"}), 403
-
-    session.delete(task)
-    session.commit()
-    session.close()
-
-    return jsonify({"status": "success", "data": "Task deleted"})
+        print(f"Error deleting task: {str(e)}")
+        return jsonify({"status": "error", "message": "Failed to delete task"}), 500
 
 # --- PORTFOLIO ROUTES ---
 @app.route("/portfolio", methods=["POST"])

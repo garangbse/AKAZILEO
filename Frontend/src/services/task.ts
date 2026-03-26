@@ -100,3 +100,7 @@ export const rejectSubmission = async (taskId: number, submissionId: number, tok
 export const updateTaskStatus = async (taskId: number, status: string, token?: string) => {
   return api(`/tasks/${taskId}`, 'PATCH', { status }, token);
 };
+
+export const deleteTask = async (taskId: number, token?: string) => {
+  return api(`/tasks/${taskId}`, 'DELETE', undefined, token);
+};

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Zap, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Zap, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { api } from '../../services/api';
@@ -23,7 +23,6 @@ export function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [agreed, setAgreed] = useState(false);
 
   const passwordStrength = PASSWORD_RULES.filter((r) => r.test(password)).length;
   const strengthColors = ['#E8E3C8', '#f59e0b', '#BFC897', '#3C3F20'];
@@ -45,11 +44,6 @@ export function RegisterPage() {
 
   if (passwordStrength < 2) {
     setError('Please choose a stronger password.');
-    return;
-  }
-
-  if (!agreed) {
-    setError('Please accept the terms to continue.');
     return;
   }
 
@@ -92,7 +86,7 @@ export function RegisterPage() {
           <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#BFC897' }}>
             <Zap size={18} style={{ color: '#3C3F20' }} />
           </div>
-          <span className="text-white text-xl tracking-wide" style={{ fontWeight: 600 }}>TaskFlow</span>
+          <span className="text-white text-xl tracking-wide" style={{ fontWeight: 600 }}>AKAZILEO</span>
         </div>
 
         <div className="relative z-10 space-y-8">
@@ -101,26 +95,12 @@ export function RegisterPage() {
               Join thousands of talented professionals
             </h1>
             <p className="text-white/55 text-sm leading-relaxed">
-              Whether you're here to hire or get hired, TaskFlow connects you with the right people.
+              Whether you're here to hire or get hired, AKAZILEO connects you with the right people.
             </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { value: '2,400+', label: 'Active workers' },
-              { value: '580+', label: 'Employers' },
-              { value: '12K+', label: 'Tasks completed' },
-              { value: '98%', label: 'Satisfaction rate' },
-            ].map((stat) => (
-              <div key={stat.label} className="rounded-2xl p-4" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                <p className="text-white text-xl mb-0.5" style={{ fontWeight: 600 }}>{stat.value}</p>
-                <p className="text-white/40 text-xs">{stat.label}</p>
-              </div>
-            ))}
           </div>
         </div>
 
-        <p className="relative z-10 text-white/25 text-xs">© 2026 TaskFlow. All rights reserved.</p>
+        <p className="relative z-10 text-white/25 text-xs">© 2026 AKAZILEO. All rights reserved.</p>
       </div>
 
       {/* Right panel */}
@@ -131,7 +111,7 @@ export function RegisterPage() {
             <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#3C3F20' }}>
               <Zap size={15} style={{ color: '#BFC897' }} />
             </div>
-            <span className="tracking-wide" style={{ color: '#3C3F20', fontWeight: 600 }}>TaskFlow</span>
+            <span className="tracking-wide" style={{ color: '#3C3F20', fontWeight: 600 }}>AKAZILEO</span>
           </div>
 
           <h2 className="mb-1" style={{ color: '#3C3F20' }}>Create your account</h2>
@@ -225,20 +205,6 @@ export function RegisterPage() {
                   {showConfirm ? <EyeOff size={15} style={{ color: '#3C3F20' }} /> : <Eye size={15} style={{ color: '#3C3F20' }} />}
                 </button>
               </div>
-            </div>
-
-            <div className="flex items-start gap-2.5">
-              <button
-                type="button"
-                onClick={() => setAgreed((v) => !v)}
-                className="w-4 h-4 border-2 flex items-center justify-center"
-                style={{ backgroundColor: agreed ? '#3C3F20' : 'transparent' }}
-              >
-                {agreed && <CheckCircle2 size={10} className="text-white" />}
-              </button>
-              <span className="text-sm opacity-55" style={{ color: '#3C3F20' }}>
-                I agree to the Terms of Service and Privacy Policy
-              </span>
             </div>
 
             {error && (

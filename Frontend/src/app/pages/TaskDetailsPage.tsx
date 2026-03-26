@@ -10,10 +10,11 @@ import {
   XCircle,
   Upload,
   Clock,
+  Trash2,
 } from 'lucide-react';
 import { TASKS, SUBMISSIONS } from '../data/mockData';
 import { useAppContext } from '../context/AppContext';
-import { getTaskApplications, acceptApplication, rejectApplication, getUserApplications, submitTask, getTaskSubmissions, approveSubmission, rejectSubmission, updateTaskStatus } from '../../services/task';
+import { getTaskApplications, acceptApplication, rejectApplication, getUserApplications, submitTask, getTaskSubmissions, approveSubmission, rejectSubmission, updateTaskStatus, deleteTask } from '../../services/task';
 
 export function TaskDetailsPage() {
   const { id } = useParams();
@@ -27,6 +28,7 @@ export function TaskDetailsPage() {
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [completeTaskLoading, setCompleteTaskLoading] = useState(false);
+  const [deleteTaskLoading, setDeleteTaskLoading] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
 
   // Check access permission and fetch applications
@@ -324,6 +326,40 @@ export function TaskDetailsPage() {
     });
   };
 
+  const handleDeleteTask = () => {
+    openModal({
+      type: 'confirm-submit',
+      title: 'Delete Task',
+      message: 'Are you sure you want to delete this task? This action cannot be undone.',
+      onConfirm: async () => {
+        const token = localStorage.getItem('token') ?? undefined;
+        if (!token) {
+          openModal({ type: 'error', message: 'Not authenticated' });
+          return;
+        }
+
+        setDeleteTaskLoading(true);
+        try {
+          const res = await deleteTask(Number(id), token);
+          if (res.status === 'success') {
+            openModal({ type: 'success', message: 'Task deleted successfully!' });
+            // Redirect to marketplace
+            setTimeout(() => {
+              navigate('/marketplace');
+            }, 1500);
+          } else {
+            openModal({ type: 'error', message: res.message || 'Failed to delete task' });
+          }
+        } catch (err: any) {
+          console.error('Error deleting task:', err);
+          openModal({ type: 'error', message: 'Error deleting task. Please try again.' });
+        } finally {
+          setDeleteTaskLoading(false);
+        }
+      },
+    });
+  };
+
   return (
     <div className="max-w-5xl mx-auto">
       <button
@@ -407,6 +443,18 @@ export function TaskDetailsPage() {
               >
                 <CheckCircle size={14} />
                 {completeTaskLoading ? 'Completing...' : 'Mark as Completed'}
+              </button>
+            )}
+
+            {role === 'employer' && (
+              <button
+                onClick={handleDeleteTask}
+                disabled={deleteTaskLoading}
+                className="w-full mt-3 py-2.5 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ backgroundColor: '#E8986A' }}
+              >
+                <Trash2 size={14} />
+                {deleteTaskLoading ? 'Deleting...' : 'Delete Task'}
               </button>
             )}
           </div>

@@ -92,6 +92,8 @@ export function DashboardPage() {
   const [postedTasks, setPostedTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(currentUser?.profile_picture || null);
+  const [tasksCompleted, setTasksCompleted] = useState(0);
+  const [portfolioCount, setPortfolioCount] = useState(0);
 
   // Listen to context profilePicture changes and update local state
   useEffect(() => {
@@ -179,6 +181,51 @@ export function DashboardPage() {
     fetchTasks();
   }, [isWorker, currentUser?.id]);
 
+  // Fetch tasks completed (for workers) on mount
+  useEffect(() => {
+    if (!isWorker || !currentUser?.id) return;
+
+    const fetchTasksCompleted = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const response = await getAcceptedTasks(token);
+        if (response.status === 'success' && response.data) {
+          const completedCount = response.data.filter((task: any) => task.status === 'completed').length;
+          setTasksCompleted(completedCount);
+          console.log('[DASHBOARD] Tasks completed fetched:', completedCount);
+        }
+      } catch (error) {
+        console.error('[DASHBOARD] Failed to fetch tasks completed:', error);
+      }
+    };
+
+    fetchTasksCompleted();
+  }, [isWorker, currentUser?.id]);
+
+  // Fetch portfolio count (for workers) on mount
+  useEffect(() => {
+    if (!isWorker || !currentUser?.id) return;
+
+    const fetchPortfolioItems = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const response = await api(`/portfolio/${currentUser.id}`, 'GET', undefined, token);
+        if (response.status === 'success' && response.data) {
+          setPortfolioCount(response.data.length);
+          console.log('[DASHBOARD] Portfolio items fetched:', response.data.length);
+        }
+      } catch (error) {
+        console.error('[DASHBOARD] Failed to fetch portfolio items:', error);
+      }
+    };
+
+    fetchPortfolioItems();
+  }, [isWorker, currentUser?.id]);
+
   const recentTasks = isWorker ? acceptedTasks : postedTasks;
 
   return (
@@ -229,7 +276,7 @@ export function DashboardPage() {
                     <div className="flex items-center justify-center gap-1 mb-0.5">
                       <CheckCircle2 size={14} style={{ color: '#BFC897' }} />
                       <span className="text-xl" style={{ color: '#3C3F20' }}>
-                        {WORKER_PROFILE.tasksCompleted}
+                        {tasksCompleted}
                       </span>
                     </div>
                     <p className="text-xs opacity-50" style={{ color: '#3C3F20' }}>
@@ -240,7 +287,7 @@ export function DashboardPage() {
                     <div className="flex items-center justify-center gap-1 mb-0.5">
                       <Layers size={14} style={{ color: '#BFC897' }} />
                       <span className="text-xl" style={{ color: '#3C3F20' }}>
-                        {WORKER_PROFILE.portfolioCount}
+                        {portfolioCount}
                       </span>
                     </div>
                     <p className="text-xs opacity-50" style={{ color: '#3C3F20' }}>

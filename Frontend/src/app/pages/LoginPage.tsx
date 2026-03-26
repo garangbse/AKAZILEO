@@ -102,7 +102,7 @@ const LoginPage = () => {
           <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#BFC897' }}>
             <Zap size={18} style={{ color: '#3C3F20' }} />
           </div>
-          <span className="text-white text-xl tracking-wide" style={{ fontWeight: 600 }}>TaskFlow</span>
+          <span className="text-white text-xl tracking-wide" style={{ fontWeight: 600 }}>AKAZILEO</span>
         </div>
 
         <div className="relative z-10 space-y-6">
@@ -134,7 +134,6 @@ const LoginPage = () => {
           <p className="text-white/30 text-xs leading-relaxed border-l-2 pl-3" style={{ borderColor: '#BFC897' }}>
             "AKAZILEO helped me find consistent freelance work that matches my expertise."
           </p>
-          <p className="text-white/40 text-xs mt-2">— Sarah M., UI/UX Designer</p>
         </div>
       </div>
 
@@ -146,7 +145,7 @@ const LoginPage = () => {
             <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#3C3F20' }}>
               <Zap size={15} style={{ color: '#BFC897' }} />
             </div>
-            <span className="tracking-wide" style={{ color: '#3C3F20', fontWeight: 600 }}>TaskFlow</span>
+            <span className="tracking-wide" style={{ color: '#3C3F20', fontWeight: 600 }}>AKAZILEO</span>
           </div>
 
           <h2 className="mb-1" style={{ color: '#3C3F20' }}>Welcome back</h2>
@@ -237,13 +236,6 @@ const LoginPage = () => {
               }
             </button>
           </form>
-
-          <div className="mt-4 rounded-xl px-4 py-3 flex items-start gap-2" style={{ backgroundColor: '#E8E3C8' }}>
-            <Zap size={13} style={{ color: '#BFC897' }} className="mt-0.5 flex-shrink-0" />
-            <p className="text-xs opacity-55" style={{ color: '#3C3F20' }}>
-              Demo: enter any email &amp; password to sign in. No real account required.
-            </p>
-          </div>
 
           <p className="text-center text-sm mt-6 opacity-55" style={{ color: '#3C3F20' }}>
             Don't have an account?{' '}
