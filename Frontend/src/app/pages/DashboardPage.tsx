@@ -4,6 +4,7 @@ import { CheckCircle2, Layers, TrendingUp, Clock, ArrowRight } from 'lucide-reac
 import { useAppContext } from '../context/AppContext';
 import { WORKER_PROFILE, EMPLOYER_PROFILE, TASKS } from '../data/mockData';
 import { getAcceptedTasks, getTasksByPosterId } from '../../services/task';
+import { api } from '../../services/api';
 
 const CATEGORY_COLORS: Record<string, string> = {
   Design: '#BFC897',
@@ -90,6 +91,35 @@ export function DashboardPage() {
   const [acceptedTasks, setAcceptedTasks] = useState<any[]>([]);
   const [postedTasks, setPostedTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<string | null>(currentUser?.profile_picture || null);
+
+  // Listen to context profilePicture changes and update local state
+  useEffect(() => {
+    if (currentUser?.profile_picture) {
+      setProfilePicture(currentUser.profile_picture);
+      console.log('[DASHBOARD] Profile picture updated from context');
+    }
+  }, [currentUser?.profile_picture]);
+
+  // Fetch user profile picture from database on mount
+  useEffect(() => {
+    const fetchProfilePicture = async () => {
+      const token = localStorage.getItem('token');
+      if (!token || !currentUser?.id) return;
+
+      try {
+        const response = await api(`/users/${currentUser.id}`, 'GET', undefined, token);
+        if (response.status === 'success' && response.data?.profile_picture) {
+          setProfilePicture(response.data.profile_picture);
+          console.log('[DASHBOARD] Profile picture fetched');
+        }
+      } catch (error) {
+        console.error('[DASHBOARD] Failed to fetch profile picture:', error);
+      }
+    };
+
+    fetchProfilePicture();
+  }, [currentUser?.id]);
 
   // Fetch tasks for both workers and employers
   useEffect(() => {
@@ -169,10 +199,10 @@ export function DashboardPage() {
           >
             <img
               src={
-                currentUser?.profile_picture
-                  ? currentUser.profile_picture.startsWith('data:')
-                    ? currentUser.profile_picture
-                    : `data:image/png;base64,${currentUser.profile_picture}`
+                profilePicture
+                  ? profilePicture.startsWith('data:')
+                    ? profilePicture
+                    : `data:image/png;base64,${profilePicture}`
                   : profile.avatar
               }
               alt={currentUser?.username || profile.name}

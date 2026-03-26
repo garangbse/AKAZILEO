@@ -96,3 +96,7 @@ export const approveSubmission = async (taskId: number, submissionId: number, to
 export const rejectSubmission = async (taskId: number, submissionId: number, token?: string) => {
   return api(`/tasks/${taskId}/submissions/${submissionId}`, 'PATCH', { status: 'rejected' }, token);
 };
+
+export const updateTaskStatus = async (taskId: number, status: string, token?: string) => {
+  return api(`/tasks/${taskId}`, 'PATCH', { status }, token);
+};

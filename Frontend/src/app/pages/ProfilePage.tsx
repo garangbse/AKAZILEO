@@ -28,6 +28,30 @@ export function ProfilePage() {
   const [userTasks, setUserTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Fetch user profile including profile picture on mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const token = localStorage.getItem('token');
+      if (!token || !currentUser?.id) return;
+
+      try {
+        const response = await api(`/users/${currentUser.id}`, 'GET', undefined, token);
+        if (response.status === 'success' && response.data) {
+          const { bio: fetchedBio, profile_picture: fetchedProfilePicture } = response.data;
+          if (fetchedBio) setBio(fetchedBio);
+          if (fetchedProfilePicture) {
+            setProfilePicture(fetchedProfilePicture);
+          }
+          console.log('[PROFILE] User profile fetched:', { bio: fetchedBio, hasPicture: !!fetchedProfilePicture });
+        }
+      } catch (error) {
+        console.error('[PROFILE] Failed to fetch user profile:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [currentUser?.id]);
+
   // Fetch user's tasks based on role
   useEffect(() => {
     const fetchTasks = async () => {

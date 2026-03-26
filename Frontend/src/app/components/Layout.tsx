@@ -1,5 +1,5 @@
-import { Navigate, Outlet, NavLink, useNavigate } from 'react-router-dom';
-import React, { useState } from 'react';
+import { Navigate, Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -13,6 +13,7 @@ import {
 import { useAppContext } from '../context/AppContext';
 import { WORKER_PROFILE, EMPLOYER_PROFILE } from '../data/mockData';
 import { AppModal } from './AppModal';
+import { api } from '../../services/api';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -27,6 +28,35 @@ export function Layout() {
   const { role, setRole, roles, isAuthenticated, currentUser } = useAppContext();
   console.log("GUARD AUTH",isAuthenticated)
   const navigate = useNavigate();
+  const [profilePicture, setProfilePicture] = useState<string | null>(currentUser?.profile_picture || null);
+
+  // Listen to context profilePicture changes and update local state
+  useEffect(() => {
+    if (currentUser?.profile_picture) {
+      setProfilePicture(currentUser.profile_picture);
+      console.log('[LAYOUT] Profile picture updated from context');
+    }
+  }, [currentUser?.profile_picture]);
+
+  // Fetch user profile picture from database on mount
+  useEffect(() => {
+    const fetchProfilePicture = async () => {
+      const token = localStorage.getItem('token');
+      if (!token || !currentUser?.id) return;
+
+      try {
+        const response = await api(`/users/${currentUser.id}`, 'GET', undefined, token);
+        if (response.status === 'success' && response.data?.profile_picture) {
+          setProfilePicture(response.data.profile_picture);
+          console.log('[LAYOUT] Profile picture fetched');
+        }
+      } catch (error) {
+        console.error('[LAYOUT] Failed to fetch profile picture:', error);
+      }
+    };
+
+    fetchProfilePicture();
+  }, [currentUser?.id]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -34,8 +64,6 @@ export function Layout() {
   
   const profile = role === 'worker' ? WORKER_PROFILE : EMPLOYER_PROFILE;
   const [searchQuery, setSearchQuery] = useState('');
-
-  console.log("AUTH:", isAuthenticated);
 
   return (
     <div className="flex h-screen w-full overflow-hidden" style={{ backgroundColor: '#FDF9EB' }}>
@@ -92,10 +120,10 @@ export function Layout() {
         >
           <img
             src={
-              currentUser?.profile_picture
-                ? currentUser.profile_picture.startsWith('data:')
-                  ? currentUser.profile_picture
-                  : `data:image/png;base64,${currentUser.profile_picture}`
+              profilePicture
+                ? profilePicture.startsWith('data:')
+                  ? profilePicture
+                  : `data:image/png;base64,${profilePicture}`
                 : profile.avatar
             }
             alt={profile.name}
@@ -139,10 +167,10 @@ export function Layout() {
           >
             <img
               src={
-                currentUser?.profile_picture
-                  ? currentUser.profile_picture.startsWith('data:')
-                    ? currentUser.profile_picture
-                    : `data:image/png;base64,${currentUser.profile_picture}`
+                profilePicture
+                  ? profilePicture.startsWith('data:')
+                    ? profilePicture
+                    : `data:image/png;base64,${profilePicture}`
                   : profile.avatar
               }
               alt={profile.name}

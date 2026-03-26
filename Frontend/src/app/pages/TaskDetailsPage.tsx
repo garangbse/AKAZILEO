@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { TASKS, SUBMISSIONS } from '../data/mockData';
 import { useAppContext } from '../context/AppContext';
-import { getTaskApplications, acceptApplication, rejectApplication, getUserApplications, submitTask, getTaskSubmissions, approveSubmission, rejectSubmission } from '../../services/task';
+import { getTaskApplications, acceptApplication, rejectApplication, getUserApplications, submitTask, getTaskSubmissions, approveSubmission, rejectSubmission, updateTaskStatus } from '../../services/task';
 
 export function TaskDetailsPage() {
   const { id } = useParams();
@@ -26,6 +26,7 @@ export function TaskDetailsPage() {
   const [applications, setApplications] = useState<any[]>([]);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [completeTaskLoading, setCompleteTaskLoading] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
 
   // Check access permission and fetch applications
@@ -289,6 +290,40 @@ export function TaskDetailsPage() {
     });
   };
 
+  const handleCompleteTask = () => {
+    openModal({
+      type: 'confirm-submit',
+      title: 'Complete Task',
+      message: 'Are you sure you want to mark this task as completed?',
+      onConfirm: async () => {
+        const token = localStorage.getItem('token') ?? undefined;
+        if (!token) {
+          openModal({ type: 'error', message: 'Not authenticated' });
+          return;
+        }
+
+        setCompleteTaskLoading(true);
+        try {
+          const res = await updateTaskStatus(Number(id), 'completed', token);
+          if (res.status === 'success') {
+            openModal({ type: 'success', message: 'Task marked as completed!' });
+            // Redirect to dashboard (root path)
+            setTimeout(() => {
+              navigate('/');
+            }, 1500);
+          } else {
+            openModal({ type: 'error', message: res.message || 'Failed to complete task' });
+          }
+        } catch (err: any) {
+          console.error('Error completing task:', err);
+          openModal({ type: 'error', message: 'Error completing task. Please try again.' });
+        } finally {
+          setCompleteTaskLoading(false);
+        }
+      },
+    });
+  };
+
   return (
     <div className="max-w-5xl mx-auto">
       <button
@@ -362,6 +397,18 @@ export function TaskDetailsPage() {
                 </div>
               </div>
             )} */}
+
+            {role === 'employer' && task.status !== 'Completed' && (
+              <button
+                onClick={handleCompleteTask}
+                disabled={completeTaskLoading}
+                className="w-full mt-6 py-2.5 rounded-xl text-sm text-white transition-all hover:opacity-90 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ backgroundColor: '#3C3F20' }}
+              >
+                <CheckCircle size={14} />
+                {completeTaskLoading ? 'Completing...' : 'Mark as Completed'}
+              </button>
+            )}
           </div>
 
           

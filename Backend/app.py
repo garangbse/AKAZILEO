@@ -609,6 +609,33 @@ def update_submission_status(current_user, task_id, submission_id):
     session.close()
     return jsonify({"status": "success", "data": "Submission updated"})
 
+@app.route("/tasks/<int:task_id>", methods=["PATCH"])
+@token_required
+def update_task(current_user, task_id):
+    session = Session()
+    
+    task = session.query(Task).filter_by(id=task_id).first()
+    
+    if not task:
+        session.close()
+        return jsonify({"status": "error", "message": "Task not found"}), 404
+    
+    # Only the employer (poster) can update the task
+    if task.poster_id != current_user.id:
+        session.close()
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+    
+    data = request.json
+    
+    # Update task status if provided
+    if data.get("status"):
+        task.status = data["status"]
+    
+    session.commit()
+    session.close()
+    
+    return jsonify({"status": "success", "data": "Task updated"})
+
 @app.route("/tasks/<int:task_id>", methods=["DELETE"])
 @token_required
 def delete_task(current_user, task_id):

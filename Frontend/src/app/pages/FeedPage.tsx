@@ -35,6 +35,35 @@ export function FeedPage() {
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<string | null>(currentUser?.profile_picture || null);
+
+  // Listen to context profilePicture changes and update local state
+  useEffect(() => {
+    if (currentUser?.profile_picture) {
+      setProfilePicture(currentUser.profile_picture);
+      console.log('[FEED] Profile picture updated from context');
+    }
+  }, [currentUser?.profile_picture]);
+
+  // Fetch user profile picture from database on mount
+  useEffect(() => {
+    const fetchProfilePicture = async () => {
+      const token = localStorage.getItem('token');
+      if (!token || !currentUser?.id) return;
+
+      try {
+        const response = await api(`/users/${currentUser.id}`, 'GET', undefined, token);
+        if (response.status === 'success' && response.data?.profile_picture) {
+          setProfilePicture(response.data.profile_picture);
+          console.log('[FEED] Profile picture fetched');
+        }
+      } catch (error) {
+        console.error('[FEED] Failed to fetch profile picture:', error);
+      }
+    };
+
+    fetchProfilePicture();
+  }, [currentUser?.id]);
 
   // Fetch posts from API
   const fetchPosts = async () => {
@@ -233,10 +262,10 @@ export function FeedPage() {
         <div className="flex gap-3">
           <img
             src={
-              currentUser?.profile_picture
-                ? currentUser.profile_picture.startsWith('data:')
-                  ? currentUser.profile_picture
-                  : `data:image/png;base64,${currentUser.profile_picture}`
+              profilePicture
+                ? profilePicture.startsWith('data:')
+                  ? profilePicture
+                  : `data:image/png;base64,${profilePicture}`
                 : 'https://via.placeholder.com/40'
             }
             alt={currentUser?.username}
@@ -433,10 +462,10 @@ export function FeedPage() {
                 <div className="flex gap-2">
                   <img
                     src={
-                      currentUser?.profile_picture
-                        ? currentUser.profile_picture.startsWith('data:')
-                          ? currentUser.profile_picture
-                          : `data:image/png;base64,${currentUser.profile_picture}`
+                      profilePicture
+                        ? profilePicture.startsWith('data:')
+                          ? profilePicture
+                          : `data:image/png;base64,${profilePicture}`
                         : 'https://via.placeholder.com/28'
                     }
                     alt={currentUser?.username}
