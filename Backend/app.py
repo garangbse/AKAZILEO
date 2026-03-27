@@ -49,6 +49,30 @@ CORS(app,
 app.config['SECRET_KEY'] = SECRET_KEY
 Session = sessionmaker(bind=engine)
 
+# --- INITIALIZE DEFAULT ROLES ---
+def init_roles():
+    """Create default roles in the database if they don't exist"""
+    session = Session()
+    try:
+        # Check if roles already exist
+        existing_roles = session.query(Role).all()
+        if len(existing_roles) == 0:
+            # Create default roles
+            default_roles = [
+                Role(name="employer"),
+                Role(name="worker"),
+            ]
+            session.add_all(default_roles)
+            session.commit()
+            print("[INIT] Default roles created: employer, worker, admin")
+    except Exception as e:
+        print(f"[INIT] Error initializing roles: {str(e)}")
+    finally:
+        session.close()
+
+# Initialize roles on app startup
+init_roles()
+
 # --- HELPER FUNCTIONS ---
 def token_required(f):
     @wraps(f)
@@ -97,31 +121,45 @@ def token_required(f):
 @app.route("/register", methods=["POST"])
 def register():
     session = Session()
-    data = request.json
+    try:
+        data = request.json
+        
+        # Validate required fields
+        if not all(key in data for key in ["username", "email", "password", "role"]):
+            session.close()
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
 
-    # 1. hash password
-    hashed_password = generate_password_hash(data["password"])
+        # 1. hash password
+        hashed_password = generate_password_hash(data["password"])
 
-    # 2. create user
-    new_user = User(
-        username=data["username"],
-        email=data["email"],
-        password_hash=hashed_password
-    )
-    session.add(new_user)
-    session.commit()
+        # 2. create user
+        new_user = User(
+            username=data["username"],
+            email=data["email"],
+            password_hash=hashed_password
+        )
+        session.add(new_user)
+        session.commit()
 
-    # 3. find role
-    role = session.query(Role).filter_by(name=data["role"]).first()
+        # 3. find role - verify it exists
+        role = session.query(Role).filter_by(name=data["role"]).first()
+        if not role:
+            session.close()
+            return jsonify({"status": "error", "message": f"Role '{data['role']}' not found"}), 400
 
-    # 4. link user-role
-    user_role = UserRole(user_id=new_user.id, role_id=role.id)
-    session.add(user_role)
+        # 4. link user-role
+        user_role = UserRole(user_id=new_user.id, role_id=role.id)
+        session.add(user_role)
 
-    session.commit()
-    session.close()
+        session.commit()
+        session.close()
 
-    return jsonify({"status": "success"})
+        return jsonify({"status": "success"})
+    
+    except Exception as e:
+        session.rollback()
+        session.close()
+        return jsonify({"status": "error", "message": f"Registration failed: {str(e)}"}), 500
 @app.route("/login", methods=["POST"])
 def login():
     session = Session()
