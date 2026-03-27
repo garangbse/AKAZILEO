@@ -56,6 +56,8 @@ def init_roles():
     try:
         # Check if roles already exist
         existing_roles = session.query(Role).all()
+        existing_role_names = [r.name for r in existing_roles]
+        
         if len(existing_roles) == 0:
             # Create default roles
             default_roles = [
@@ -65,6 +67,8 @@ def init_roles():
             session.add_all(default_roles)
             session.commit()
             print("[INIT] Default roles created: employer, worker, admin")
+        else:
+            print(f"[INIT] Roles already exist: {existing_role_names}")
     except Exception as e:
         print(f"[INIT] Error initializing roles: {str(e)}")
     finally:
@@ -127,7 +131,9 @@ def register():
         # Validate required fields
         if not all(key in data for key in ["username", "email", "password", "role"]):
             session.close()
-            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+            return jsonify({"status": "error", "message": "Missing required fields: username, email, password, role"}), 400
+
+        print(f"[REGISTER] Registering user: {data['username']} with role: {data['role']}")
 
         # 1. hash password
         hashed_password = generate_password_hash(data["password"])
@@ -140,25 +146,38 @@ def register():
         )
         session.add(new_user)
         session.commit()
+        print(f"[REGISTER] User created with ID: {new_user.id}")
 
         # 3. find role - verify it exists
         role = session.query(Role).filter_by(name=data["role"]).first()
         if not role:
+            # Get available roles for debugging
+            available_roles = session.query(Role).all()
+            role_names = [r.name for r in available_roles]
+            print(f"[REGISTER] Role '{data['role']}' not found. Available roles: {role_names}")
             session.close()
-            return jsonify({"status": "error", "message": f"Role '{data['role']}' not found"}), 400
+            return jsonify({
+                "status": "error", 
+                "message": f"Role '{data['role']}' not found. Available roles: {', '.join(role_names) if role_names else 'None'}"
+            }), 400
+
+        print(f"[REGISTER] Role found: {role.name} (ID: {role.id})")
 
         # 4. link user-role
         user_role = UserRole(user_id=new_user.id, role_id=role.id)
         session.add(user_role)
-
         session.commit()
+        print(f"[REGISTER] UserRole created successfully")
+        
         session.close()
-
         return jsonify({"status": "success"})
     
     except Exception as e:
         session.rollback()
         session.close()
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"[REGISTER] Error: {str(e)}\n{error_trace}")
         return jsonify({"status": "error", "message": f"Registration failed: {str(e)}"}), 500
 @app.route("/login", methods=["POST"])
 def login():
