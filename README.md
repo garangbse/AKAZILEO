@@ -2,242 +2,192 @@
 
 A full-stack web application for task management and freelance work. Built with **React + TypeScript**, **Flask**, **PostgreSQL**, and **Alembic** for database migrations.
 
+**Easiest Setup:** Everything installs into an isolated environment in 3 steps.
+
 ---
 
-## ⚡ Quick Start (One Command!)
+## ⚡ Quick Start (3 Steps!)
 
-### Step 1: Clone the Repository
+### Prerequisites
+Make sure you have:
+- **Python 3.8+** - [Download](https://www.python.org/downloads/)
+- **Node.js 16+** - [Download](https://nodejs.org/)
+- **PostgreSQL 10+** - [Download](https://www.postgresql.org/download/)
+
+Verify:
+```bash
+python3 --version
+node --version
+npm --version
+psql --version
+```
+
+### Installation
+
+**Step 1: Clone & Prepare**
 ```bash
 git clone https://github.com/yourusername/AKAZILEO.git
 cd AKAZILEO
+chmod +x setup-env.sh run-env.sh
 ```
 
-### Step 2: Run Setup (First Time Only)
+**Step 2: Setup (Install All Dependencies)**
 ```bash
-chmod +x setup.sh run.sh
-./setup.sh
+./setup-env.sh
 ```
 
-This checks and installs all dependencies:
-- ✅ Python 3
-- ✅ Node.js & npm
-- ✅ PostgreSQL
-- ✅ Python virtual environment
-- ✅ Python packages (Flask, SQLAlchemy, etc.)
-- ✅ npm packages (React, TypeScript, etc.)
+This creates `./.venv` and installs:
+- Backend dependencies from `Backend/requirements.txt` 
+- Frontend dependencies from `Frontend/package.json`
 
-### Step 3: Launch Everything
+**Step 3: Run the App**
 ```bash
-./run.sh
+./run-env.sh
 ```
 
-That's it! The script starts:
-- 🗄️ PostgreSQL database
-- 🔧 Flask backend API (`http://127.0.0.1:5001`)
-- ⚛️ React frontend (`http://localhost:5173`)
-
-**Access the app:** Open your browser to → **`http://localhost:5173`**
-
-**To stop:** Press `Ctrl+C` in the terminal
+### Access
+Open browser: **`http://localhost:5173`**  
+Stop: Press **`Ctrl+C`**
 
 ---
 
-## 📋 System Requirements
+## 🛠️ Installation by OS
 
-Before you begin, make sure you have:
-- **Node.js** v16+ (check: `node --version`)
-- **npm** (usually comes with Node.js, check: `npm --version`)
-- **Python 3.8+** (check: `python3 --version`)
-- **PostgreSQL 10+** (check: `psql --version`)
-
-### ✅ Don't Have These?
-
-**macOS (with Homebrew):**
+### macOS
 ```bash
-brew install node python postgresql
+brew install python3 node postgresql
 brew services start postgresql
 ```
 
-**Ubuntu/Debian:**
+### Ubuntu/Debian
 ```bash
 sudo apt-get update
-sudo apt-get install nodejs npm python3 python3-pip postgresql postgresql-contrib
+sudo apt-get install python3 python3-pip python3-venv nodejs npm postgresql postgresql-contrib
 sudo systemctl start postgresql
 ```
 
-**Windows:**
-- Download Node.js from https://nodejs.org/
-- Download Python from https://www.python.org/
-- Download PostgreSQL from https://www.postgresql.org/download/windows/
-- Ensure PostgreSQL service is running
+### Windows
+1. Download [Python](https://www.python.org/) - Check "Add Python to PATH"
+2. Download [Node.js](https://nodejs.org/)
+3. Download [PostgreSQL](https://www.postgresql.org/download/windows/)
+4. PostgreSQL starts automatically
 
 ---
 
-## 🎬 Detailed Setup Steps
+## 📦 What Gets Installed
 
-### For New Users (Complete Walkthrough)
+### Backend (Backend/requirements.txt)
+Everything installs to `./.venv/`:
+- **Flask** - Web framework
+- **SQLAlchemy** - Database ORM
+- **Flask-CORS** - API requests
+- **psycopg2-binary** - PostgreSQL
+- **PyJWT** - Tokens
+- Plus 9 more packages
 
-#### 1️⃣ Clone the Repository
-```bash
-git clone https://github.com/yourusername/AKAZILEO.git
-cd AKAZILEO
-```
-
-#### 2️⃣ Check Prerequisites
-Make sure all required software is installed:
-```bash
-node --version        # Should be v16+
-npm --version         # Should be v7+
-python3 --version     # Should be 3.8+
-psql --version        # Should be 10+
-```
-
-#### 3️⃣ Start PostgreSQL (if not already running)
-```bash
-# macOS/Linux
-sudo systemctl start postgresql
-
-# or macOS with Homebrew
-brew services start postgresql
-
-# Windows - PostgreSQL usually auto-starts
-```
-
-#### 4️⃣ First-Time Setup
-```bash
-chmod +x setup.sh run.sh
-./setup.sh
-```
-
-This will:
-- Create a Python virtual environment
-- Install Python dependencies from `Backend/requirements.txt`
-- Install npm dependencies from `Frontend/package.json`
-
-#### 5️⃣ Launch the Application
-```bash
-./run.sh
-```
-
-You should see output like:
-```
-🚀 Starting AKAZILEO...
-✓ PostgreSQL is running
-✓ Backend started (PID: 12345)
-   Running on: http://127.0.0.1:5001
-✓ Frontend started (PID: 12346)
-   Running on: http://localhost:5173
-✓ AKAZILEO is running!
-```
-
-✨ **Open `http://localhost:5173` in your browser**
-
-#### 6️⃣ Stop the Application
-Press `Ctrl+C` in the terminal to gracefully stop all services.
+### Frontend (Frontend/package.json)
+Everything installs to `Frontend/node_modules/`:
+- **React 18** - UI
+- **TypeScript** - Types
+- **Vite** - Build tool
+- **Tailwind CSS** - Styling
+- **React Router** - Navigation
+- Plus 20+ packages
 
 ---
 
-## 🔄 Running Individual Services
+## 🔧 What Each Script Does
 
-If you need to run services separately:
+### `setup-env.sh` (Run Once)
+1. Checks Python 3
+2. Creates `./.venv/`
+3. Installs from `Backend/requirements.txt`
+4. Installs from `Frontend/package.json`
+
+### `run-env.sh` (Run Every Time)
+1. Activates `./.venv/`
+2. Starts Flask backend (`http://127.0.0.1:5001`)
+3. Starts React frontend (`http://localhost:5173`)
+4. Listens for `Ctrl+C` to stop
+
+---
+
+## 🔄 Run Services Individually
+
+### Activate Environment
+```bash
+source ./.venv/bin/activate
+```
 
 ### Backend Only
 ```bash
+source ./.venv/bin/activate
 cd Backend
-source venv/bin/activate              # Activate virtual environment
-pip install -r requirements.txt       # Install dependencies (first time)
 python3 app.py
 ```
-Runs on: `http://127.0.0.1:5001`
 
 ### Frontend Only
 ```bash
 cd Frontend
-npm install                           # Install dependencies (first time)
 npm run dev
 ```
-Runs on: `http://localhost:5173`
 
-### Database Only
+### Deactivate
 ```bash
-# Start
-sudo systemctl start postgresql
-
-# Check status
-sudo systemctl status postgresql
-
-# Stop
-sudo systemctl stop postgresql
+deactivate
 ```
 
 ---
 
-## ❓ Troubleshooting
+## 🐛 Troubleshooting
 
-### Issue: "PostgreSQL is not running"
-**Solution:**
+### "python3: command not found"
 ```bash
-sudo systemctl start postgresql
-sudo systemctl status postgresql
+brew install python3          # macOS
+sudo apt-get install python3  # Ubuntu
 ```
 
-### Issue: "Port 5001 already in use"
-**Solution:** Find and stop the process using that port:
+### "npm: command not found"
 ```bash
-lsof -i :5001              # Find the process
-kill -9 <PID>             # Replace <PID> with the process ID
+brew install node             # macOS
+sudo apt-get install nodejs npm # Ubuntu
 ```
 
-### Issue: "npm: command not found"
-**Solution:** Node.js/npm not installed. Install it:
-- `brew install node` (macOS)
-- `sudo apt-get install nodejs npm` (Ubuntu/Debian)
-- Visit https://nodejs.org/ (Windows)
-
-### Issue: "python3: command not found"
-**Solution:** Python not installed:
-- `brew install python3` (macOS)
-- `sudo apt-get install python3 python3-pip` (Ubuntu/Debian)
-- Visit https://www.python.org/downloads/ (Windows)
-
-### Issue: "Dependencies installation fails"
-**Solution:** Clear and reinstall:
+### "psql: command not found"
 ```bash
-# Python
-cd Backend
-rm -rf venv
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# npm
-cd Frontend
-rm -rf node_modules package-lock.json
-npm cache clean --force
-npm install
+brew install postgresql       # macOS
+sudo apt-get install postgresql # Ubuntu
 ```
 
-### Issue: "CORS errors in browser console"
-**Solution:** Make sure backend is running at `http://127.0.0.1:5001` and frontend at `http://localhost:5173`. The `run.sh` script handles CORS configuration automatically.
+### "Port 5001 already in use"
+```bash
+lsof -i :5001
+kill -9 <PID>
+./run-env.sh
+```
+
+### Setup fails
+```bash
+rm -rf ./.venv
+./setup-env.sh
+```
+
+### Frontend not connecting
+Check both are running:
+- Backend: `http://127.0.0.1:5001`
+- Frontend: `http://localhost:5173`
+
+Check `Frontend/src/services/api.ts` for API URL.
 
 ---
 
-## 🗄️ Database Migrations
-
-Database migrations are managed using **Alembic**. To apply new migrations:
+## 📝 Environment Variables (Optional)
 
 ```bash
-cd Backend
-source venv/bin/activate
-alembic upgrade head
-```
-
-To create a new migration after modifying models:
-
-```bash
-alembic revision --autogenerate -m "description of changes"
-alembic upgrade head
+export DATABASE_URL="postgresql://user:password@localhost:5432/akazileo"
+export PORT=5001
+export FLASK_ENV=development
+./run-env.sh
 ```
 
 ---
@@ -246,117 +196,50 @@ alembic upgrade head
 
 ```
 AKAZILEO/
-├── setup.sh            # Setup script (checks prerequisites)
-├── run.sh              # Launch script (starts everything)
-├── START_PROJECT.md    # Additional project launch docs
-├── README.md           # This file
-├── Backend/            # Flask REST API
-│   ├── app.py          # Main Flask application
-│   ├── models.py       # SQLAlchemy models
-│   ├── requirements.txt # Python dependencies
-│   ├── migrations/     # Alembic migrations
-│   ├── venv/           # Python virtual environment (auto-created)
-│   └── Procfile        # Deployment config
-├── Frontend/           # React + TypeScript application
-│   ├── src/            # React source code
-│   ├── package.json    # npm dependencies
-│   ├── vite.config.ts  # Vite configuration
-│   └── node_modules/   # npm packages (auto-installed)
-└── Procfile            # Root deployment config
+├── setup-env.sh              # Setup (one-time)
+├── run-env.sh                # Run app
+├── .venv/                    # Isolated environment (auto-created)
+├── Backend/
+│   ├── app.py
+│   ├── models.py
+│   ├── requirements.txt       # ⬅️ Backend packages
+│   └── migrations/
+├── Frontend/
+│   ├── src/
+│   ├── package.json           # ⬅️ Frontend packages
+│   ├── tsconfig.json
+│   └── node_modules/
+└── README.md
 ```
-
----
-
-## 🔐 Configuration
-
-### Backend Environment Variables
-
-Default configuration for local development:
-- **Database URL:** `postgresql://postgres:akazileo@localhost:5432/akazileo`
-- **Port:** `5001`
-- **CORS Origins:** Automatically includes `localhost:5173`, `localhost:5174`, `localhost:5175`
-
-To customize, set environment variables before running `./run.sh`:
-```bash
-export DATABASE_URL="postgresql://user:password@host:5432/dbname"
-export PORT=5002
-export FLASK_ENV=production
-./run.sh
-```
-
-### Frontend API Connection
-
-The frontend automatically connects to the backend at:
-```
-http://127.0.0.1:5001
-```
-
-Configure in [Frontend/src/services/api.ts](Frontend/src/services/api.ts) if needed.
-
----
-
-## 🌐 Application URLs
-
-Once running with `./run.sh`:
-- **Frontend:** `http://localhost:5173`
-- **Backend API:** `http://127.0.0.1:5001`
-- **Database:** `localhost:5432` (PostgreSQL)
 
 ---
 
 ## 📚 Tech Stack
 
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, React Router, Radix UI
-- **Backend:** Flask (Python), SQLAlchemy ORM, PostgreSQL
-- **Database:** PostgreSQL 10+ with Alembic migrations
-- **Authentication:** JWT (JSON Web Tokens)
-- **APIs:** RESTful API with Flask
-
----
-
-## 🎯 Next Steps
-
-1. **Register a new account** at `http://localhost:5173`
-2. **Explore the dashboard** to see all features
-3. **Create tasks** and browse the marketplace
-4. **Build your portfolio** with your projects
-
----
-
-## Useful Commands
-
-```bash
-# Start everything
-./run.sh
-
-# Start setup (only needed on first clone)
-./setup.sh
-
-# Stop all services
-Ctrl+C
-
-# Restart database
-sudo systemctl restart postgresql
-
-# Check database connection
-psql -U postgres -h localhost -d akazileo
-
-# View PostgreSQL logs
-tail -f /var/log/postgresql/postgresql.log
-
-# Clean Python cache
-find . -type d -name __pycache__ -exec rm -r {} +
-find . -type f -name "*.pyc" -delete
-```
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, React Router
+- **Backend:** Flask, SQLAlchemy, PostgreSQL
+- **Auth:** JWT (JSON Web Tokens)
 
 ---
 
 ## ✅ Verification Checklist
 
-After launching with `./run.sh`, verify:
-- [ ] Frontend loads without errors at `http://localhost:5173`
-- [ ] Backend API is responding at `http://127.0.0.1:5001`
-- [ ] PostgreSQL is running on port 5432
-- [ ] No CORS errors in browser console
-- [ ] You can register and login
-- [ ] You can navigate between pages
+After running `./run-env.sh`:
+- [ ] Backend on `http://127.0.0.1:5001`
+- [ ] Frontend on `http://localhost:5173`
+- [ ] Can register & login
+- [ ] Can navigate all pages
+- [ ] No console errors
+
+---
+
+## 🎯 Next Steps
+
+1. Register a new account
+2. Explore the dashboard
+3. Create tasks
+4. Build your portfolio
+
+---
+
+**Happy coding! 🚀**
